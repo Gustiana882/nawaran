@@ -31,6 +31,12 @@ type Service interface {
 
 	// GetWebsiteVersion returns the latest updated_at timestamp for a website.
 	GetWebsiteVersion(ctx context.Context, websiteID string) (time.Time, error)
+
+	ListTemplates(ctx context.Context) ([]Template, error)
+	GetTemplateByID(ctx context.Context, id string) (*Template, error)
+	CreateTemplate(ctx context.Context, input CreateTemplateInput) (*Template, error)
+	UpdateTemplate(ctx context.Context, id string, input UpdateTemplateInput) (*Template, error)
+	DeleteTemplate(ctx context.Context, id string) error
 }
 
 type service struct {
@@ -56,6 +62,9 @@ func New() Service {
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if err := ensureTemplatesTable(db); err != nil {
+		log.Fatalf("failed to ensure templates table: %v", err)
 	}
 	dbInstance = &service{
 		db: db,

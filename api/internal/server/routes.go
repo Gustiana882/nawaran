@@ -27,6 +27,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	mux.HandleFunc("/api/websites/version", s.handleGetVersion)
 
+	mux.HandleFunc("/api/templates", s.handleTemplates)
+	mux.HandleFunc("/api/templates/", s.handleTemplateByID)
+
 	// Wrap the mux with CORS middleware
 	return s.corsMiddleware(mux)
 }

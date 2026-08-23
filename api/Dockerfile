@@ -7,20 +7,28 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o api cmd/api/main.go
-RUN go build -o landing cmd/landing/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/landing ./cmd/landing
 
-FROM alpine:3.20.1 AS api-prod
+
+FROM gcr.io/distroless/static-debian13:nonroot AS api-prod
+
 WORKDIR /app
+
 COPY --from=build /app/api /app/api
-EXPOSE 80
-CMD ["./api"]
 
-FROM alpine:3.20.1 AS landing-prod
+EXPOSE 80
+
+ENTRYPOINT ["/app/api"]
+
+
+FROM gcr.io/distroless/static-debian13:nonroot AS landing-prod
+
 WORKDIR /app
+
 COPY --from=build /app/landing /app/landing
 COPY --from=build /app/static /app/static
+
 EXPOSE 80
-CMD ["./landing"]
 
-
+ENTRYPOINT ["/app/landing"]
