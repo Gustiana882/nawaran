@@ -23,6 +23,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	mux.HandleFunc("/api/websites/save", s.handleSave)
 
+	mux.HandleFunc("/api/websites", s.handleListWebsites)
+
 	mux.HandleFunc("/api/websites/data", s.handleGetData)
 
 	mux.HandleFunc("/api/websites/version", s.handleGetVersion)

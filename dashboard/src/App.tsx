@@ -16,8 +16,8 @@ import {
 import * as React from "react"
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
-import { useCmsStore } from "@/hooks/use-cms-store"
 import { createTemplate, deleteTemplate, getTemplateByID, listTemplates, updateTemplate } from "@/lib/templates-api"
+import { createWebsite, listWebsites } from "@/lib/websites-api"
 import type { TemplateItem } from "@/types/cms"
 import TemplateCreatePage, { type TemplateSavePayload } from "./pages/template-create"
 import TemplateDetailPage from "./pages/template-detail"
@@ -27,11 +27,13 @@ import WebsiteDetailPage from "./pages/website-detail"
 import WebsitesPage from "./pages/websites"
 
 function AppRoutes() {
-  const { websites, createWebsite } = useCmsStore()
   const navigate = useNavigate()
   const [templates, setTemplates] = React.useState<TemplateItem[]>([])
   const [templatesLoading, setTemplatesLoading] = React.useState(true)
   const [templatesError, setTemplatesError] = React.useState<string | null>(null)
+  const [websites, setWebsites] = React.useState<import("@/types/cms").WebsiteItem[]>([])
+  const [websitesLoading, setWebsitesLoading] = React.useState(true)
+  const [websitesError, setWebsitesError] = React.useState<string | null>(null)
 
   const loadTemplates = React.useCallback(async () => {
     setTemplatesLoading(true)
@@ -50,6 +52,23 @@ function AppRoutes() {
   React.useEffect(() => {
     void loadTemplates()
   }, [loadTemplates])
+
+  const loadWebsites = React.useCallback(async () => {
+    setWebsitesLoading(true)
+    setWebsitesError(null)
+    try {
+      setWebsites(await listWebsites())
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal mengambil website"
+      setWebsitesError(message)
+    } finally {
+      setWebsitesLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    void loadWebsites()
+  }, [loadWebsites])
 
   async function onSaveTemplate(payload: TemplateSavePayload) {
     try {
@@ -87,9 +106,15 @@ function AppRoutes() {
   }
 
   async function onSaveWebsite(payload: WebsiteSavePayload) {
-    createWebsite(payload)
-    navigate("/websites")
-    return { ok: true as const }
+    try {
+      const created = await createWebsite(payload)
+      setWebsites((prev) => [created, ...prev])
+      navigate("/websites")
+      return { ok: true as const }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal membuat website"
+      return { ok: false as const, message }
+    }
   }
 
   function WebsiteCreateRoute() {
@@ -165,7 +190,17 @@ function AppRoutes() {
       <Route path="/templates/new" element={<TemplateCreatePage onSave={onSaveTemplate} />} />
       <Route path="/templates/:id/edit" element={<TemplateEditRoute />} />
       <Route path="/templates/:id" element={<TemplateDetailPage templates={templates} onDelete={onDeleteTemplate} />} />
-      <Route path="/websites" element={<WebsitesPage websites={websites} />} />
+      <Route
+        path="/websites"
+        element={
+          <WebsitesPage
+            websites={websites}
+            isLoading={websitesLoading}
+            errorMessage={websitesError}
+            onRetry={loadWebsites}
+          />
+        }
+      />
       <Route path="/websites/new" element={<WebsiteCreateRoute />} />
       <Route path="/websites/:id" element={<WebsiteDetailPage websites={websites} />} />
       <Route path="*" element={<Navigate to="/templates" replace />} />

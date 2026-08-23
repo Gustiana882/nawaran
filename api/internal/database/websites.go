@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Websites struct {
@@ -43,8 +45,88 @@ type SavePayload struct {
 	DeletedItems map[string][]string         `json:"deletedItems"`
 }
 
+type CreateWebsiteInput struct {
+	Name         string
+	Description  string
+	Domain       string
+	TemplateUUID string
+}
+
 func (p SavePayload) id() string {
 	return p.WebsiteID
+}
+
+func (s *service) ListWebsites(ctx context.Context) ([]Websites, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT uuid, id, data, html, updated_at
+		FROM websites
+		ORDER BY updated_at DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list websites: %w", err)
+	}
+	defer rows.Close()
+
+	websites := make([]Websites, 0)
+	for rows.Next() {
+		var website Websites
+		if err := rows.Scan(&website.UUID, &website.ID, &website.Data, &website.HTML, &website.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan website: %w", err)
+		}
+		websites = append(websites, website)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate websites: %w", err)
+	}
+
+	return websites, nil
+}
+
+func (s *service) CreateWebsite(ctx context.Context, input CreateWebsiteInput) (*Websites, error) {
+	var rawData []byte
+	var html string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT data, html
+		FROM templates
+		WHERE uuid = $1
+	`, input.TemplateUUID).Scan(&rawData, &html)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("template %s tidak ditemukan", input.TemplateUUID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get template for website: %w", err)
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal(rawData, &data); err != nil {
+		return nil, fmt.Errorf("parse template data: %w", err)
+	}
+	if data == nil {
+		data = make(map[string]any)
+	}
+	data["name"] = input.Name
+	data["description"] = input.Description
+	data["domain"] = input.Domain
+
+	websiteData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("marshal website data: %w", err)
+	}
+
+	websiteUUID := uuid.NewString()
+	var website Websites
+	err = s.db.QueryRowContext(ctx, `
+		INSERT INTO websites (uuid, data, html, updated_at)
+		VALUES ($1, $2::jsonb, $3, now())
+		RETURNING id, uuid, data, html, updated_at
+	`, websiteUUID, websiteData, html).Scan(
+		&website.ID, &website.UUID, &website.Data, &website.HTML, &website.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create website: %w", err)
+	}
+
+	return &website, nil
 }
 
 // GetWebsiteData mengembalikan isi kolom JSONB `websites.data` + template html.

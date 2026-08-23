@@ -133,7 +133,7 @@ export default function TemplateDetailPage({ templates, onDelete }: TemplateDeta
           <Label>Data (JSON)</Label>
           <div className="overflow-hidden rounded-md border">
             <Editor
-              height="480px"
+              height="580px"
               language="json"
               theme="vs-dark"
               value={JSON.stringify(template.data, null, 2)}
@@ -146,7 +146,7 @@ export default function TemplateDetailPage({ templates, onDelete }: TemplateDeta
           <Label>HTML</Label>
           <div className="overflow-hidden rounded-md border">
             <Editor
-              height="480px"
+              height="580px"
               language="html"
               theme="vs-dark"
               value={template.html}

@@ -32,6 +32,12 @@ type Service interface {
 	// GetWebsiteVersion returns the latest updated_at timestamp for a website.
 	GetWebsiteVersion(ctx context.Context, websiteID string) (time.Time, error)
 
+	// ListWebsites returns all websites without applying an owner filter.
+	ListWebsites(ctx context.Context) ([]Websites, error)
+
+	// CreateWebsite creates a website from an existing template.
+	CreateWebsite(ctx context.Context, input CreateWebsiteInput) (*Websites, error)
+
 	ListTemplates(ctx context.Context) ([]Template, error)
 	GetTemplateByID(ctx context.Context, id string) (*Template, error)
 	CreateTemplate(ctx context.Context, input CreateTemplateInput) (*Template, error)

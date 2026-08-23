@@ -5,9 +5,12 @@ import type { WebsiteItem } from "@/types/cms"
 
 interface WebsitesPageProps {
   websites: WebsiteItem[]
+  isLoading: boolean
+  errorMessage: string | null
+  onRetry: () => Promise<void>
 }
 
-export default function WebsitesPage({ websites }: WebsitesPageProps) {
+export default function WebsitesPage({ websites, isLoading, errorMessage, onRetry }: WebsitesPageProps) {
   return (
     <div className="flex flex-1 flex-col gap-4 px-4">
       <div className="flex items-center justify-between gap-4">
@@ -19,6 +22,23 @@ export default function WebsitesPage({ websites }: WebsitesPageProps) {
         </div>
         <Button render={<Link to="/websites/new" />}>Add Website</Button>
       </div>
+
+      {isLoading && <p className="text-sm text-muted-foreground">Memuat website...</p>}
+
+      {errorMessage && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <span>{errorMessage}</span>
+          <Button size="sm" variant="outline" onClick={() => void onRetry()}>
+            Coba Lagi
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !errorMessage && websites.length === 0 && (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          Belum ada website.
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {websites.map((website) => (

@@ -54,7 +54,7 @@ export default function WebsiteDetailPage({ websites }: WebsiteDetailPageProps) 
           <Label>Data (JSON)</Label>
           <div className="overflow-hidden rounded-md border">
             <Editor
-              height="480px"
+              height="580px"
               language="json"
               theme="vs-dark"
               value={JSON.stringify(website.data, null, 2)}
@@ -67,7 +67,7 @@ export default function WebsiteDetailPage({ websites }: WebsiteDetailPageProps) 
           <Label>HTML</Label>
           <div className="overflow-hidden rounded-md border">
             <Editor
-              height="480px"
+              height="580px"
               language="html"
               theme="vs-dark"
               value={website.html}

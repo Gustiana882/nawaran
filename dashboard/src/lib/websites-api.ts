@@ -1,0 +1,83 @@
+import type { WebsiteItem } from "@/types/cms"
+
+type WebsiteApiItem = {
+  uuid: string
+  id: number
+  data: unknown
+  html: string
+  updated_at: string
+}
+
+type ListWebsitesResponse = {
+  ok: boolean
+  websites?: WebsiteApiItem[]
+  message?: string
+}
+
+type CreateWebsiteResponse = {
+  ok: boolean
+  website?: WebsiteApiItem
+  message?: string
+}
+
+export type WebsiteCreateInput = {
+  name: string
+  description: string
+  domain: string
+  template_uuid: string
+}
+
+const API_BASE_URL = "http://localhost:8080/api"
+
+function getDataValue(data: unknown, key: string): string {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return ""
+  const value = (data as Record<string, unknown>)[key]
+  return typeof value === "string" ? value : ""
+}
+
+function toWebsiteItem(item: WebsiteApiItem): WebsiteItem {
+  return {
+    id: item.uuid,
+    name: getDataValue(item.data, "name") || getDataValue(item.data, "title") || `Website ${item.id}`,
+    description: getDataValue(item.data, "description"),
+    domain: getDataValue(item.data, "domain"),
+    data: item.data,
+    html: item.html,
+    createdAt: item.updated_at,
+  }
+}
+
+function parseData(data: unknown): unknown {
+  if (typeof data !== "string") return data
+  try {
+    return JSON.parse(data)
+  } catch {
+    return data
+  }
+}
+
+export async function listWebsites(): Promise<WebsiteItem[]> {
+  const res = await fetch(`${API_BASE_URL}/websites`)
+  const body = (await res.json()) as ListWebsitesResponse
+  if (!res.ok || !body.ok || !body.websites) {
+    throw new Error(body.message || "Gagal mengambil daftar website")
+  }
+  return body.websites.map((item) => toWebsiteItem({ ...item, data: parseData(item.data) }))
+}
+
+export async function createWebsite(input: WebsiteCreateInput): Promise<WebsiteItem> {
+  const res = await fetch(`${API_BASE_URL}/websites`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  })
+  const body = (await res.json()) as CreateWebsiteResponse
+  if (!res.ok || !body.ok || !body.website) {
+    throw new Error(body.message || "Gagal membuat website")
+  }
+
+  return toWebsiteItem({
+    ...body.website,
+    data: parseData(body.website.data),
+  })
+}

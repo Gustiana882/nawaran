@@ -23,8 +23,93 @@ type WebsiteVersionResponse struct {
 	Message   string `json:"message,omitempty"`
 }
 
+type createWebsitePayload struct {
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	Domain       string `json:"domain"`
+	TemplateUUID string `json:"template_uuid"`
+}
+
+type websiteSingleResponse struct {
+	OK      bool              `json:"ok"`
+	Website database.Websites `json:"website"`
+	Message string            `json:"message,omitempty"`
+}
+
+type websiteListResponse struct {
+	OK       bool                `json:"ok"`
+	Websites []database.Websites `json:"websites"`
+	Message  string              `json:"message,omitempty"`
+}
+
 func readWebsiteID(r *http.Request) string {
 	return strings.TrimSpace(r.URL.Query().Get("website_id"))
+}
+
+// handleListWebsites godoc: GET, POST /api/websites
+func (s *Server) handleListWebsites(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		s.handleCreateWebsite(w, r)
+		return
+	}
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, SaveResponse{OK: false, Message: "method tidak didukung"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	websites, err := s.db.ListWebsites(ctx)
+	if err != nil {
+		log.Printf("list websites error: %v", err)
+		writeJSON(w, http.StatusInternalServerError, SaveResponse{OK: false, Message: "gagal mengambil daftar website"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, websiteListResponse{OK: true, Websites: websites})
+}
+
+func (s *Server) handleCreateWebsite(w http.ResponseWriter, r *http.Request) {
+	var payload createWebsitePayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSON(w, http.StatusBadRequest, SaveResponse{OK: false, Message: "payload tidak valid: " + err.Error()})
+		return
+	}
+
+	payload.Name = strings.TrimSpace(payload.Name)
+	payload.Description = strings.TrimSpace(payload.Description)
+	payload.Domain = strings.TrimSpace(payload.Domain)
+	payload.TemplateUUID = strings.TrimSpace(payload.TemplateUUID)
+	if payload.Name == "" {
+		writeJSON(w, http.StatusBadRequest, SaveResponse{OK: false, Message: "name wajib diisi"})
+		return
+	}
+	if payload.TemplateUUID == "" {
+		writeJSON(w, http.StatusBadRequest, SaveResponse{OK: false, Message: "template_uuid wajib diisi"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	website, err := s.db.CreateWebsite(ctx, database.CreateWebsiteInput{
+		Name:         payload.Name,
+		Description:  payload.Description,
+		Domain:       payload.Domain,
+		TemplateUUID: payload.TemplateUUID,
+	})
+	if err != nil {
+		log.Printf("create website error template=%s: %v", payload.TemplateUUID, err)
+		if strings.Contains(err.Error(), "template ") && strings.Contains(err.Error(), "tidak ditemukan") {
+			writeJSON(w, http.StatusNotFound, SaveResponse{OK: false, Message: "template tidak ditemukan"})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, SaveResponse{OK: false, Message: "gagal membuat website"})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, websiteSingleResponse{OK: true, Website: *website})
 }
 
 // handleGetVersion godoc: GET /api/websites/version?website_id=...
