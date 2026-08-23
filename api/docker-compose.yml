@@ -1,0 +1,114 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api-prod
+    restart: unless-stopped
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      APP_ENV: ${APP_ENV}
+      PORT: ${PORT}
+      BLUEPRINT_DB_HOST: ${BLUEPRINT_DB_HOST}
+      BLUEPRINT_DB_PORT: ${BLUEPRINT_DB_PORT}
+      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
+      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
+    depends_on:
+      psql_bp:
+        condition: service_healthy
+    networks:
+      - blueprint
+
+  landing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: landing-prod
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      API_URL: http://api:${PORT}
+      STATIC_DIR: /app/static
+      LANDING_CACHE_DIR: /app/cache
+      LANDING_PORT: 8081
+      LANDING_WEBSITE_ID: ${LANDING_WEBSITE_ID}
+    volumes:
+      - landing_cache:/app/cache
+    depends_on:
+      - api
+    networks:
+      - blueprint
+  psql_bp:
+    image: postgres:17.0-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
+      POSTGRES_USER: ${BLUEPRINT_DB_USERNAME}
+      POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+    ports:
+      - "${BLUEPRINT_DB_PORT}:5432"
+    volumes:
+      - psql_volume_bp:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}'"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - blueprint
+
+  keycloak_db:
+    image: postgres:17.0-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "sh -c 'pg_isready -U ${KEYCLOAK_DB_USER:-keycloak} -d ${KEYCLOAK_DB_NAME:-keycloak}'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - blueprint
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
+    command: ["start-dev"]
+    ports:
+      - "8082:8080"
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak_db
+      KC_DB_URL_PORT: 5432
+      KC_DB_URL_DATABASE: ${KEYCLOAK_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+      KC_HEALTH_ENABLED: "true"
+    depends_on:
+      keycloak_db:
+        condition: service_healthy
+    networks:
+      - blueprint
+
+volumes:
+  psql_volume_bp:
+  landing_cache:
+  keycloak_db_data:
+networks:
+  blueprint:

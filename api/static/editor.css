@@ -1,0 +1,341 @@
+/* ========================================
+   EDITOR TOOLBAR
+   ======================================== */
+
+.editor-toolbar {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 6px;
+
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+
+  transform: translate(-50%, -20px);
+  opacity: 0;
+  pointer-events: none;
+
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+
+  z-index: 99999;
+}
+
+.editor-toolbar.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+/* Counter kecil ("3 perubahan") di dalam toolbar */
+.editor-toolbar-count {
+  padding: 0 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+
+/* ========================================
+   BUTTON
+   ======================================== */
+
+.editor-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  border: 0;
+  border-radius: 8px;
+
+  padding: 8px 14px;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.editor-toolbar button:hover {
+  transform: translateY(-1px);
+}
+
+.editor-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.editor-toolbar button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+
+/* Cancel */
+
+.editor-toolbar [data-editor-action="cancel"] {
+  background: transparent;
+  color: #6b7280;
+}
+
+.editor-toolbar [data-editor-action="cancel"]:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+
+/* Save */
+
+.editor-toolbar [data-editor-action="save"] {
+  background: #111827;
+  color: white;
+}
+
+.editor-toolbar [data-editor-action="save"]:hover:not(:disabled) {
+  background: #1f2937;
+}
+
+/* Spinner saat menyimpan */
+.editor-toolbar [data-editor-action="save"].is-loading::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: editor-spin 0.6s linear infinite;
+}
+
+@keyframes editor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* ========================================
+   TOAST CONTAINER (stack beberapa notifikasi)
+   ======================================== */
+
+.editor-toast-container {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 8px;
+
+  z-index: 99999;
+  pointer-events: none;
+}
+
+.editor-notification {
+  padding: 10px 16px;
+  border-radius: 10px;
+
+  background: #111827;
+  color: white;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  opacity: 0;
+  transform: translateY(20px);
+
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.editor-notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+/* Success */
+
+.editor-notification-success {
+  background: #166534;
+}
+
+
+/* Error */
+
+.editor-notification-error {
+  background: #b91c1c;
+}
+
+
+/* Info */
+
+.editor-notification-info {
+  background: #374151;
+}
+
+
+/* ========================================
+   TEXT EDITOR
+   ======================================== */
+
+[data-editor="text"] {
+  cursor: text;
+  border-radius: 4px;
+  outline-offset: 2px;
+  transition: outline-color 0.15s ease, background 0.15s ease;
+}
+
+[data-editor="text"]:hover {
+  outline: 1px dashed rgba(37, 99, 235, 0.5);
+}
+
+[data-editor="text"].editor-editing {
+  outline: 2px solid #2563eb;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+[data-editor="text"]:focus-visible {
+  outline: 2px solid #2563eb;
+}
+
+
+/* ========================================
+   COLLECTION / ITEM
+   ======================================== */
+
+.editor-collection {
+  outline-offset: 4px;
+}
+
+.editor-collection:hover {
+  outline: 1px dashed rgba(22, 101, 52, 0.5);
+}
+
+.editor-item {
+  position: relative;
+  outline-offset: 2px;
+  transition: opacity 0.15s ease;
+}
+
+.editor-item:hover {
+  outline: 1px dashed rgba(217, 119, 6, 0.6);
+}
+
+/* Item lama yang ditandai untuk dihapus (masih bisa di-cancel) */
+.editor-item-pending-delete {
+  opacity: 0.4;
+  outline: 1px dashed #b91c1c;
+}
+
+.editor-item-pending-delete::after {
+  content: "Akan dihapus setelah disimpan";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 12px;
+  font-weight: 600;
+  color: #b91c1c;
+  background: rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+}
+
+/* Item baru yang belum pernah disimpan */
+.editor-item[data-editor-item-status="new"] {
+  outline: 1px dashed #166534;
+}
+
+.editor-item-controls {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+
+  display: none;
+
+  z-index: 10;
+}
+
+.editor-item:hover .editor-item-controls {
+  display: block;
+}
+
+.editor-item-controls button {
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+
+  border: 0;
+  border-radius: 999px;
+
+  background: #b91c1c;
+  color: #fff;
+
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.editor-item-controls button:hover {
+  background: #991b1b;
+}
+
+.editor-add-item {
+  display: inline-block;
+  margin-top: 8px;
+
+  padding: 8px 14px;
+
+  border: 1px dashed #9ca3af;
+  border-radius: 8px;
+
+  background: transparent;
+  color: #6b7280;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.editor-add-item:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-toolbar,
+  .editor-notification,
+  .editor-item,
+  .editor-toolbar [data-editor-action="save"].is-loading::before {
+    transition: none;
+    animation: none;
+  }
+}
