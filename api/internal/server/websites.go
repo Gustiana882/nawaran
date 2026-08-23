@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -187,12 +188,24 @@ func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, SaveResponse{OK: false, Message: "website_id wajib diisi"})
 		return
 	}
+	if strings.TrimSpace(payload.Domain) == "" {
+		writeJSON(w, http.StatusBadRequest, SaveResponse{OK: false, Message: "domain wajib diisi"})
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
 	if err := s.db.ApplySave(ctx, payload); err != nil {
 		log.Printf("save error website=%s: %v", payload.WebsiteID, err)
+		if errors.Is(err, database.ErrWebsiteNotFound) {
+			writeJSON(w, http.StatusNotFound, SaveResponse{OK: false, Message: "website_id salah, website tidak ditemukan"})
+			return
+		}
+		if errors.Is(err, database.ErrWebsiteDomainMismatch) {
+			writeJSON(w, http.StatusConflict, SaveResponse{OK: false, Message: "website_id dan domain tidak cocok, perubahan tidak disimpan"})
+			return
+		}
 		writeJSON(w, http.StatusInternalServerError, SaveResponse{OK: false, Message: "gagal menyimpan perubahan"})
 		return
 	}

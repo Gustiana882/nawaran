@@ -54,10 +54,18 @@
     // Endpoint API backend (lihat api/internal/server/websites.go).
     apiUrl: "http://localhost:8080/api/websites/save",
 
+    keycloakUrl: "http://localhost:8082",
+    keycloakRealm: "nawaran",
+    keycloakClientId: "landing-editor",
+
     // ID website diambil dari query string ?website_id=... (fallback: page_id).
     pageId:
       new URLSearchParams(window.location.search).get("website_id") ||
       new URLSearchParams(window.location.search).get("page_id"),
+
+    domain:
+      new URLSearchParams(window.location.search).get("domain") ||
+      window.location.hostname,
 
     // Callback saat Save ditekan. Default: kirim payload ke apiUrl lewat fetch.
     // Bisa diganti lewat InlineEditor.configure({ onSave: async (payload) => {...} })
@@ -71,8 +79,15 @@
       try {
         response = await fetch(config.apiUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ website_id: config.pageId, ...payload }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${keycloakClient.token}`,
+          },
+          body: JSON.stringify({
+            website_id: config.pageId,
+            domain: config.domain,
+            ...payload,
+          }),
         });
       } catch (error) {
         return { ok: false, message: "Tidak bisa menghubungi server: " + error.message };
@@ -95,6 +110,43 @@
       return { ok: true };
     },
   };
+
+  let keycloakClient = null;
+  let authReadyPromise = null;
+
+  function loadKeycloakAdapter() {
+    return import("./keycloak.min.js");
+  }
+
+  async function initializeKeycloak() {
+    const keycloakModule = await loadKeycloakAdapter();
+    const Keycloak = keycloakModule.default;
+    keycloakClient = new Keycloak({
+      url: config.keycloakUrl,
+      realm: config.keycloakRealm,
+      clientId: config.keycloakClientId,
+    });
+
+    const authenticated = await keycloakClient.init({
+      onLoad: "login-required",
+      pkceMethod: "S256",
+      checkLoginIframe: false,
+    });
+
+    if (!authenticated || !keycloakClient.token) {
+      throw new Error("Login Keycloak diperlukan untuk membuka editor");
+    }
+
+    keycloakClient.onTokenExpired = () => {
+      void keycloakClient.updateToken(30);
+    };
+  }
+
+  authReadyPromise = initializeKeycloak().catch((error) => {
+    console.error("Landing editor authentication failed:", error);
+    showNotification(error.message || "Autentikasi gagal", "error");
+    throw error;
+  });
 
   /**
    * ========================================
@@ -626,6 +678,8 @@
     setSaveLoading(true);
 
     try {
+      await authReadyPromise;
+      await keycloakClient.updateToken(30);
       const result = await config.onSave(payload);
 
       if (result && result.ok === false) {

@@ -40,6 +40,7 @@ type Websites struct {
 //	}
 type SavePayload struct {
 	WebsiteID    string                      `json:"website_id"`
+	Domain       string                      `json:"domain"`
 	Fields       map[string]string           `json:"fields"`
 	Collections  map[string][]map[string]any `json:"collections"`
 	DeletedItems map[string][]string         `json:"deletedItems"`
@@ -51,6 +52,11 @@ type CreateWebsiteInput struct {
 	Domain       string
 	TemplateUUID string
 }
+
+var (
+	ErrWebsiteNotFound       = errors.New("website not found")
+	ErrWebsiteDomainMismatch = errors.New("website id and domain mismatch")
+)
 
 func (p SavePayload) id() string {
 	return p.WebsiteID
@@ -140,7 +146,7 @@ func (s *service) GetWebsiteData(ctx context.Context, websiteID string) ([]byte,
 	).Scan(&raw, &html, &updatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("website %s tidak ditemukan", websiteID)
+		return nil, fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteID)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("select data: %w", err)
@@ -170,7 +176,7 @@ func (s *service) GetWebsiteVersion(ctx context.Context, websiteID string) (time
 	).Scan(&updatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return time.Time{}, fmt.Errorf("website %s tidak ditemukan", websiteID)
+		return time.Time{}, fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteID)
 	}
 	if err != nil {
 		return time.Time{}, fmt.Errorf("select updated_at: %w", err)
@@ -187,6 +193,10 @@ func (s *service) ApplySave(ctx context.Context, payload SavePayload) error {
 	if strings.TrimSpace(websiteID) == "" {
 		return fmt.Errorf("website id wajib diisi")
 	}
+	requestedDomain := normalizeDomain(payload.Domain)
+	if requestedDomain == "" {
+		return fmt.Errorf("domain wajib diisi")
+	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -195,13 +205,14 @@ func (s *service) ApplySave(ctx context.Context, payload SavePayload) error {
 	defer tx.Rollback() // no-op kalau sudah di-Commit
 
 	var raw []byte
+	var domain string
 	err = tx.QueryRowContext(ctx,
-		`SELECT data FROM websites WHERE uuid = $1 FOR UPDATE`,
+		`SELECT domain, data FROM websites WHERE uuid = $1 FOR UPDATE`,
 		websiteID,
-	).Scan(&raw)
+	).Scan(&domain, &raw)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("website %s tidak ditemukan", websiteID)
+		return fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteID)
 	}
 	if err != nil {
 		return fmt.Errorf("select data: %w", err)
@@ -210,6 +221,9 @@ func (s *service) ApplySave(ctx context.Context, payload SavePayload) error {
 	var data map[string]any
 	if err := json.Unmarshal(raw, &data); err != nil {
 		return fmt.Errorf("parse data existing: %w", err)
+	}
+	if normalizeDomain(domain) != requestedDomain {
+		return ErrWebsiteDomainMismatch
 	}
 
 	// 1) Field teks biasa (di luar koleksi) -> langsung timpa
@@ -267,6 +281,10 @@ func (s *service) ApplySave(ctx context.Context, payload SavePayload) error {
 	}
 
 	return tx.Commit()
+}
+
+func normalizeDomain(domain string) string {
+	return strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domain, "/")))
 }
 
 // extractItems mengubah nilai array-of-object dari kolom JSONB menjadi

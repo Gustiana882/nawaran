@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -48,6 +49,7 @@ func (v *Validator) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, err := v.Validate(r.Context(), r)
 		if err != nil {
+			log.Printf("Keycloak token rejected: %v", err)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -67,8 +69,8 @@ func (v *Validator) Validate(_ context.Context, r *http.Request) (jwt.MapClaims,
 	}
 
 	options := []jwt.ParserOption{jwt.WithIssuer(v.config.Issuer)}
-	if v.config.Audience != "" {
-		options = append(options, jwt.WithAudience(v.config.Audience))
+	if audiences := splitValues(v.config.Audience); len(audiences) > 0 {
+		options = append(options, jwt.WithAudience(audiences...))
 	}
 	token, err := jwt.Parse(rawToken, v.jwks.Keyfunc, options...)
 	if err != nil || !token.Valid {
@@ -86,6 +88,17 @@ func (v *Validator) Validate(_ context.Context, r *http.Request) (jwt.MapClaims,
 		return nil, fmt.Errorf("required role missing")
 	}
 	return claims, nil
+}
+
+func splitValues(value string) []string {
+	parts := strings.Split(value, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+	return values
 }
 
 type claimsKey struct{}

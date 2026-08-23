@@ -235,13 +235,13 @@
   outline: 1px dashed rgba(22, 101, 52, 0.5);
 }
 
-.editor-item {
+[data-editor-item] {
   position: relative;
   outline-offset: 2px;
   transition: opacity 0.15s ease;
 }
 
-.editor-item:hover {
+[data-editor-item]:hover {
   outline: 1px dashed rgba(217, 119, 6, 0.6);
 }
 
@@ -267,7 +267,7 @@
 }
 
 /* Item baru yang belum pernah disimpan */
-.editor-item[data-editor-item-status="new"] {
+[data-editor-item-status="new"] {
   outline: 1px dashed #166534;
 }
 
@@ -281,7 +281,7 @@
   z-index: 10;
 }
 
-.editor-item:hover .editor-item-controls {
+[data-editor-item]:hover .editor-item-controls {
   display: block;
 }
 
@@ -333,7 +333,7 @@
 @media (prefers-reduced-motion: reduce) {
   .editor-toolbar,
   .editor-notification,
-  .editor-item,
+  [data-editor-item],
   .editor-toolbar [data-editor-action="save"].is-loading::before {
     transition: none;
     animation: none;

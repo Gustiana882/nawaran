@@ -18,7 +18,7 @@ services:
       BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://localhost:8082/realms/nawaran}
       KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/nawaran/protocol/openid-connect/certs}
-      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-dashboard}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-dashboard,landing-editor}
       KEYCLOAK_REQUIRED_ROLE: ${KEYCLOAK_REQUIRED_ROLE:-}
     depends_on:
       psql_bp:
