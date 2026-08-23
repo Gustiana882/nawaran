@@ -1,3 +1,5 @@
+import { useLocation, useParams } from "react-router-dom"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   Breadcrumb,
@@ -8,210 +10,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import * as React from "react"
-import { Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
-
-import { createTemplate, deleteTemplate, getTemplateByID, listTemplates, updateTemplate } from "@/lib/templates-api"
-import { createWebsite, listWebsites } from "@/lib/websites-api"
-import type { TemplateItem } from "@/types/cms"
-import TemplateCreatePage, { type TemplateSavePayload } from "./pages/template-create"
-import TemplateDetailPage from "./pages/template-detail"
-import TemplatesPage from "./pages/templates"
-import WebsiteCreatePage, { type WebsiteSavePayload } from "./pages/website-create"
-import WebsiteDetailPage from "./pages/website-detail"
-import WebsitesPage from "./pages/websites"
-
-function AppRoutes() {
-  const navigate = useNavigate()
-  const [templates, setTemplates] = React.useState<TemplateItem[]>([])
-  const [templatesLoading, setTemplatesLoading] = React.useState(true)
-  const [templatesError, setTemplatesError] = React.useState<string | null>(null)
-  const [websites, setWebsites] = React.useState<import("@/types/cms").WebsiteItem[]>([])
-  const [websitesLoading, setWebsitesLoading] = React.useState(true)
-  const [websitesError, setWebsitesError] = React.useState<string | null>(null)
-
-  const loadTemplates = React.useCallback(async () => {
-    setTemplatesLoading(true)
-    setTemplatesError(null)
-    try {
-      const items = await listTemplates()
-      setTemplates(items)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal mengambil template"
-      setTemplatesError(message)
-    } finally {
-      setTemplatesLoading(false)
-    }
-  }, [])
-
-  React.useEffect(() => {
-    void loadTemplates()
-  }, [loadTemplates])
-
-  const loadWebsites = React.useCallback(async () => {
-    setWebsitesLoading(true)
-    setWebsitesError(null)
-    try {
-      setWebsites(await listWebsites())
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal mengambil website"
-      setWebsitesError(message)
-    } finally {
-      setWebsitesLoading(false)
-    }
-  }, [])
-
-  React.useEffect(() => {
-    void loadWebsites()
-  }, [loadWebsites])
-
-  async function onSaveTemplate(payload: TemplateSavePayload) {
-    try {
-      const created = await createTemplate(payload)
-      setTemplates((prev) => [created, ...prev])
-      navigate("/templates")
-      return { ok: true as const }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal menyimpan template"
-      return { ok: false as const, message }
-    }
-  }
-
-  async function onUpdateTemplate(id: string, payload: TemplateSavePayload) {
-    try {
-      const updated = await updateTemplate(id, payload)
-      setTemplates((prev) => prev.map((item) => (item.id === id ? updated : item)))
-      navigate(`/templates/${id}`)
-      return { ok: true as const }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal mengubah template"
-      return { ok: false as const, message }
-    }
-  }
-
-  async function onDeleteTemplate(id: string) {
-    try {
-      await deleteTemplate(id)
-      setTemplates((prev) => prev.filter((item) => item.id !== id))
-      return { ok: true as const }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal menghapus template"
-      return { ok: false as const, message }
-    }
-  }
-
-  async function onSaveWebsite(payload: WebsiteSavePayload) {
-    try {
-      const created = await createWebsite(payload)
-      setWebsites((prev) => [created, ...prev])
-      navigate("/websites")
-      return { ok: true as const }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal membuat website"
-      return { ok: false as const, message }
-    }
-  }
-
-  function WebsiteCreateRoute() {
-    const [params] = useSearchParams()
-    const templateId = params.get("templateId")
-    const template: TemplateItem | undefined = templateId
-      ? templates.find((item) => item.id === templateId)
-      : undefined
-    return <WebsiteCreatePage template={template} onSave={onSaveWebsite} />
-  }
-
-  function TemplateEditRoute() {
-    const { id } = useParams()
-    const [template, setTemplate] = React.useState<TemplateItem | null>(null)
-    const [isLoading, setIsLoading] = React.useState(true)
-
-    React.useEffect(() => {
-      let cancelled = false
-
-      async function run() {
-        if (!id) return
-        const fromList = templates.find((item) => item.id === id)
-        if (fromList) {
-          setTemplate(fromList)
-          setIsLoading(false)
-          return
-        }
-        try {
-          const fromAPI = await getTemplateByID(id)
-          if (!cancelled) setTemplate(fromAPI)
-        } finally {
-          if (!cancelled) setIsLoading(false)
-        }
-      }
-
-      void run()
-      return () => {
-        cancelled = true
-      }
-    }, [id])
-
-    if (isLoading) {
-      return <div className="px-4 text-sm text-muted-foreground">Memuat template...</div>
-    }
-    if (!template) {
-      return <div className="px-4 text-sm text-muted-foreground">Template tidak ditemukan.</div>
-    }
-
-    return (
-      <TemplateCreatePage
-        mode="edit"
-        initialTemplate={template}
-        onSave={(payload) => onUpdateTemplate(template.id, payload)}
-      />
-    )
-  }
-
-  return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/templates" replace />} />
-      <Route
-        path="/templates"
-        element={
-          <TemplatesPage
-            templates={templates}
-            isLoading={templatesLoading}
-            errorMessage={templatesError}
-            onRetry={loadTemplates}
-            onDelete={onDeleteTemplate}
-          />
-        }
-      />
-      <Route path="/templates/new" element={<TemplateCreatePage onSave={onSaveTemplate} />} />
-      <Route path="/templates/:id/edit" element={<TemplateEditRoute />} />
-      <Route path="/templates/:id" element={<TemplateDetailPage templates={templates} onDelete={onDeleteTemplate} />} />
-      <Route
-        path="/websites"
-        element={
-          <WebsitesPage
-            websites={websites}
-            isLoading={websitesLoading}
-            errorMessage={websitesError}
-            onRetry={loadWebsites}
-          />
-        }
-      />
-      <Route path="/websites/new" element={<WebsiteCreateRoute />} />
-      <Route path="/websites/:id" element={<WebsiteDetailPage websites={websites} />} />
-      <Route path="*" element={<Navigate to="/templates" replace />} />
-    </Routes>
-  )
-}
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import AppRoutes from "./app-routes"
 
 function HeaderBreadcrumb() {
   const location = useLocation()
-  const params = useParams()
-
+  const { id } = useParams()
   const parts = location.pathname.split("/").filter(Boolean)
   const section = parts[0] || "dashboard"
   const page = parts[1] || "list"
@@ -228,14 +32,14 @@ function HeaderBreadcrumb() {
         </BreadcrumbItem>
         <BreadcrumbSeparator className="hidden md:block" />
         <BreadcrumbItem>
-          <BreadcrumbPage>{params.id ? `${page}:${params.id}` : page}</BreadcrumbPage>
+          <BreadcrumbPage>{id ? `${page}:${id}` : page}</BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
   )
 }
 
-export default function Page() {
+export default function App() {
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -243,10 +47,7 @@ export default function Page() {
         <header className="flex h-12 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
+            <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
             <HeaderBreadcrumb />
           </div>
         </header>
