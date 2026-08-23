@@ -21,16 +21,16 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	mux.HandleFunc("/websocket", s.websocketHandler)
 
-	mux.HandleFunc("/api/websites/save", s.handleSave)
+	mux.Handle("/api/websites/save", s.protected(http.HandlerFunc(s.handleSave)))
 
-	mux.HandleFunc("/api/websites", s.handleListWebsites)
+	mux.Handle("/api/websites", s.protected(http.HandlerFunc(s.handleListWebsites)))
 
 	mux.HandleFunc("/api/websites/data", s.handleGetData)
 
 	mux.HandleFunc("/api/websites/version", s.handleGetVersion)
 
-	mux.HandleFunc("/api/templates", s.handleTemplates)
-	mux.HandleFunc("/api/templates/", s.handleTemplateByID)
+	mux.Handle("/api/templates", s.protected(http.HandlerFunc(s.handleTemplates)))
+	mux.Handle("/api/templates/", s.protected(http.HandlerFunc(s.handleTemplateByID)))
 
 	// Wrap the mux with CORS middleware
 	return s.corsMiddleware(mux)

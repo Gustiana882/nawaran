@@ -1,4 +1,5 @@
 import type { WebsiteItem } from "@/types/cms"
+import { authorizedFetch } from "@/lib/api-client"
 
 type WebsiteApiItem = {
   uuid: string
@@ -57,7 +58,7 @@ function parseData(data: unknown): unknown {
 }
 
 export async function listWebsites(): Promise<WebsiteItem[]> {
-  const res = await fetch(`${API_BASE_URL}/websites`)
+  const res = await authorizedFetch(`${API_BASE_URL}/websites`)
   const body = (await res.json()) as ListWebsitesResponse
   if (!res.ok || !body.ok || !body.websites) {
     throw new Error(body.message || "Gagal mengambil daftar website")
@@ -66,7 +67,7 @@ export async function listWebsites(): Promise<WebsiteItem[]> {
 }
 
 export async function createWebsite(input: WebsiteCreateInput): Promise<WebsiteItem> {
-  const res = await fetch(`${API_BASE_URL}/websites`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/websites`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

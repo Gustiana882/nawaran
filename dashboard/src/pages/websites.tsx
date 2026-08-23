@@ -20,7 +20,7 @@ export default function WebsitesPage({ websites, isLoading, errorMessage, onRetr
             Daftar website yang sudah dibuat dari template.
           </p>
         </div>
-        <Button render={<Link to="/websites/new" />}>Add Website</Button>
+        <Button nativeButton={false} render={<Link to="/websites/new" />}>Add Website</Button>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Memuat website...</p>}
@@ -48,7 +48,7 @@ export default function WebsitesPage({ websites, isLoading, errorMessage, onRetr
             <p className="mb-4 line-clamp-3 text-sm text-muted-foreground">
               {website.description || "Tanpa deskripsi"}
             </p>
-            <Button size="sm" variant="outline" render={<Link to={`/websites/${website.id}`} />}>
+            <Button nativeButton={false} size="sm" variant="outline" render={<Link to={`/websites/${website.id}`} />}>
               Detail
             </Button>
           </article>

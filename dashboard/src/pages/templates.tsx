@@ -38,7 +38,7 @@ export default function TemplatesPage({
             Pilih template untuk dipakai ke website baru.
           </p>
         </div>
-        <Button render={<Link to="/templates/new" />}>Buat Template</Button>
+        <Button nativeButton={false} render={<Link to="/templates/new" />}>Buat Template</Button>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Memuat template...</p>}
@@ -68,13 +68,13 @@ export default function TemplatesPage({
               {template.description || "Tanpa deskripsi"}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" render={<Link to={`/templates/${template.id}`} />}>
+              <Button nativeButton={false} size="sm" variant="outline" render={<Link to={`/templates/${template.id}`} />}>
                 Detail
               </Button>
-              <Button size="sm" variant="outline" render={<Link to={`/templates/${template.id}/edit`} />}>
+              <Button nativeButton={false} size="sm" variant="outline" render={<Link to={`/templates/${template.id}/edit`} />}>
                 Edit
               </Button>
-              <Button size="sm" render={<Link to={`/websites/new?templateId=${template.id}`} />}>
+              <Button nativeButton={false} size="sm" render={<Link to={`/websites/new?templateId=${template.id}`} />}>
                 Use Template
               </Button>
               <Button

@@ -1,4 +1,5 @@
 import type { TemplateItem } from "@/types/cms"
+import { authorizedFetch } from "@/lib/api-client"
 
 type TemplateApiItem = {
   id: string
@@ -44,7 +45,7 @@ function toTemplateItem(item: TemplateApiItem): TemplateItem {
 const API_BASE_URL = "http://localhost:8080/api" // Replace with your actual API base URL
 
 export async function listTemplates(): Promise<TemplateItem[]> {
-  const res = await fetch(`${API_BASE_URL}/templates`)
+  const res = await authorizedFetch(`${API_BASE_URL}/templates`)
   const body = (await res.json()) as ListTemplatesResponse
   if (!res.ok || !body.ok || !body.templates) {
     throw new Error(body.message || "Gagal mengambil template")
@@ -53,7 +54,7 @@ export async function listTemplates(): Promise<TemplateItem[]> {
 }
 
 export async function getTemplateByID(id: string): Promise<TemplateItem> {
-  const res = await fetch(`${API_BASE_URL}/templates/${id}`)
+  const res = await authorizedFetch(`${API_BASE_URL}/templates/${id}`)
   const body = (await res.json()) as SingleTemplateResponse
   if (!res.ok || !body.ok || !body.template) {
     throw new Error(body.message || "Template tidak ditemukan")
@@ -62,7 +63,7 @@ export async function getTemplateByID(id: string): Promise<TemplateItem> {
 }
 
 export async function createTemplate(input: TemplateSaveInput): Promise<TemplateItem> {
-  const res = await fetch(`${API_BASE_URL}/templates`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/templates`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -76,7 +77,7 @@ export async function createTemplate(input: TemplateSaveInput): Promise<Template
 }
 
 export async function updateTemplate(id: string, input: TemplateSaveInput): Promise<TemplateItem> {
-  const res = await fetch(`${API_BASE_URL}/templates/${id}`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/templates/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -90,7 +91,7 @@ export async function updateTemplate(id: string, input: TemplateSaveInput): Prom
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/templates/${id}`, { method: "DELETE" })
+  const res = await authorizedFetch(`${API_BASE_URL}/templates/${id}`, { method: "DELETE" })
   if (!res.ok) {
     throw new Error("Gagal menghapus template")
   }

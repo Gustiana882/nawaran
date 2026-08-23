@@ -106,7 +106,7 @@ export default function TemplateDetailPage({ templates, onDelete }: TemplateDeta
           <p className="text-sm text-muted-foreground">{template.description || "Tanpa deskripsi"}</p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" render={<Link to={`/templates/${template.id}/edit`} />}>
+          <Button nativeButton={false} size="sm" variant="outline" render={<Link to={`/templates/${template.id}/edit`} />}>
             Edit
           </Button>
           <Button size="sm" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
