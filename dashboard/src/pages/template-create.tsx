@@ -7,6 +7,12 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import type { TemplateItem } from "@/types/cms"
+import {
+  LayoutTemplateIcon,
+  FileTextIcon,
+  CheckCircle2Icon,
+  AlertCircleIcon,
+} from "lucide-react"
 
 const DEFAULT_JSON = `{
   "title": "Judul Halaman",
@@ -47,7 +53,26 @@ const editorOptions = {
   scrollBeyondLastLine: false,
   automaticLayout: true,
   tabSize: 2,
+  padding: { top: 12 },
 } as const
+
+/** Keeps Monaco's theme in sync with the app's light/dark mode (class-based). */
+function useMonacoTheme() {
+  const [theme, setTheme] = React.useState<"vs-dark" | "light">(() =>
+    document.documentElement.classList.contains("dark") ? "vs-dark" : "light",
+  )
+
+  React.useEffect(() => {
+    const root = document.documentElement
+    const observer = new MutationObserver(() => {
+      setTheme(root.classList.contains("dark") ? "vs-dark" : "light")
+    })
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
+
+  return theme
+}
 
 export default function TemplateCreatePage({ onSave, initialTemplate, mode = "create" }: TemplateCreatePageProps) {
   const [name, setName] = React.useState(initialTemplate?.name ?? "")
@@ -61,6 +86,7 @@ export default function TemplateCreatePage({ onSave, initialTemplate, mode = "cr
   const [saveMessage, setSaveMessage] = React.useState<
     { type: "success" | "error"; text: string } | null
   >(null)
+  const monacoTheme = useMonacoTheme()
 
   async function handleSave() {
     setSaveMessage(null)
@@ -101,15 +127,21 @@ export default function TemplateCreatePage({ onSave, initialTemplate, mode = "cr
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 px-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">
-            {mode === "edit" ? "Edit Template" : "Buat Template"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Isi detail, data JSON, dan markup HTML untuk template ini.
-          </p>
+    <div className="flex h-screen flex-1 flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 border-b bg-background px-3 py-2">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <LayoutTemplateIcon className="h-4 w-4" />
+          </div>
+          <div>
+            <h1 className="text-base font-semibold leading-tight">
+              {mode === "edit" ? "Edit Template" : "Buat Template"}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Isi detail, data JSON, dan markup HTML untuk template ini.
+            </p>
+          </div>
         </div>
         <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? "Menyimpan..." : "Save"}
@@ -120,23 +152,24 @@ export default function TemplateCreatePage({ onSave, initialTemplate, mode = "cr
         <div
           className={
             saveMessage.type === "success"
-              ? "rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-300"
-              : "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+              ? "mx-3 mt-3 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-300"
+              : "mx-3 mt-3 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
           }
         >
+          {saveMessage.type === "success" ? (
+            <CheckCircle2Icon className="h-4 w-4 shrink-0" />
+          ) : (
+            <AlertCircleIcon className="h-4 w-4 shrink-0" />
+          )}
           {saveMessage.text}
         </div>
       )}
 
-      <Tabs defaultValue="detail" className="flex flex-1 flex-col gap-4">
-        <TabsList>
-          <TabsTrigger value="detail">Detail</TabsTrigger>
-          <TabsTrigger value="data">Data</TabsTrigger>
-          <TabsTrigger value="html">HTML</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="detail" className="max-w-xl space-y-4">
-          <div className="space-y-2">
+      {/* Body */}
+      <div className="grid flex-1 grid-cols-1 gap-3 overflow-hidden p-3 xl:grid-cols-[320px_1fr]">
+        {/* Info panel */}
+        <div className="space-y-3 rounded-md border bg-card p-3 text-card-foreground xl:overflow-y-auto">
+          <div className="space-y-1.5">
             <Label htmlFor="template-name">Nama</Label>
             <Input
               id="template-name"
@@ -146,47 +179,64 @@ export default function TemplateCreatePage({ onSave, initialTemplate, mode = "cr
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="template-description">Deskripsi</Label>
             <Textarea
               id="template-description"
               placeholder="Deskripsi singkat tentang template ini"
-              rows={5}
+              rows={6}
               value={description}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
             />
           </div>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="data" className="space-y-2">
-          <Label>Data (JSON)</Label>
-          <div className="overflow-hidden rounded-md border">
-            <Editor
-              height="480px"
-              language="json"
-              theme="vs-dark"
-              value={jsonValue}
-              onChange={(value: string | undefined) => setJsonValue(value ?? "")}
-              options={editorOptions}
-            />
-          </div>
-          {jsonError && <p className="text-sm text-red-600">JSON tidak valid: {jsonError}</p>}
-        </TabsContent>
+        {/* Code panel */}
+        <Tabs defaultValue="data" className="flex min-h-0 flex-col gap-2">
+          <TabsList className="w-fit">
+            <TabsTrigger value="data">
+              <FileTextIcon className="h-3.5 w-3.5" />
+              Data
+            </TabsTrigger>
+            <TabsTrigger value="html">
+              <FileTextIcon className="h-3.5 w-3.5" />
+              HTML
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="html" className="space-y-2">
-          <Label>HTML</Label>
-          <div className="overflow-hidden rounded-md border">
-            <Editor
-              height="480px"
-              language="html"
-              theme="vs-dark"
-              value={htmlValue}
-              onChange={(value: string | undefined) => setHtmlValue(value ?? "")}
-              options={editorOptions}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="data" className="flex min-h-0 flex-1 flex-col gap-1.5">
+            <div className="h-full overflow-hidden rounded-md border">
+              <Editor
+                height="100%"
+                language="json"
+                theme={monacoTheme}
+                value={jsonValue}
+                onChange={(value: string | undefined) => setJsonValue(value ?? "")}
+                options={editorOptions}
+              />
+            </div>
+            {jsonError && (
+              <p className="flex items-center gap-1.5 text-sm text-red-600">
+                <AlertCircleIcon className="h-3.5 w-3.5 shrink-0" />
+                JSON tidak valid: {jsonError}
+              </p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="html" className="min-h-0 flex-1">
+            <div className="h-full overflow-hidden rounded-md border">
+              <Editor
+                height="100%"
+                language="html"
+                theme={monacoTheme}
+                value={htmlValue}
+                onChange={(value: string | undefined) => setHtmlValue(value ?? "")}
+                options={editorOptions}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
