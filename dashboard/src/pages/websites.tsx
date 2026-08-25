@@ -1,16 +1,22 @@
-import { Link } from "react-router-dom"
+import * as React from "react"
+import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { PageToast, useToast } from "@/components/page-toast"
 import type { WebsiteItem } from "@/types/cms"
 import {
-  EyeIcon,
-  PlusCircleIcon,
   GlobeIcon,
-  ExternalLinkIcon,
+  PlusCircleIcon,
+  MoreHorizontalIcon,
+  EyeIcon,
+  EditIcon,
+  TrashIcon,
   RefreshCwIcon,
   AlertCircleIcon,
+  ExternalLinkIcon,
   FilePenIcon,
-  TrashIcon
 } from "lucide-react"
 
 interface WebsitesPageProps {
@@ -28,141 +34,172 @@ export default function WebsitesPage({
   onRetry,
   onDelete,
 }: WebsitesPageProps) {
+  const navigate = useNavigate()
+  const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const { toast, showToast, dismissToast } = useToast()
+
+  async function handleDelete(website: WebsiteItem) {
+    if (!confirm(`Hapus website "${website.name}"? Tindakan ini tidak dapat dibatalkan.`)) return
+    setDeletingId(website.id)
+    const result = await onDelete(website.id)
+    setDeletingId(null)
+    if (!result.ok) {
+      showToast("error", result.message || "Gagal menghapus website")
+    } else {
+      showToast("success", `Website "${website.name}" berhasil dihapus`)
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col bg-muted/20">
+      <PageToast message={toast} onDismiss={dismissToast} />
+
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 border-b bg-background px-3 py-2">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-between gap-4 border-b bg-background px-4 py-3">
+        <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
             <GlobeIcon className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-base font-semibold leading-tight">My Website</h1>
-            <p className="text-xs text-muted-foreground">
-              Daftar website yang sudah dibuat dari template.
-            </p>
+            <h1 className="text-sm font-semibold leading-tight">Websites</h1>
+            <p className="text-xs text-muted-foreground">Kelola website yang dibuat dari template.</p>
           </div>
         </div>
-        <Button nativeButton={false} render={<Link to="/websites/new" />}>
-          <PlusCircleIcon />
-          Add Website
+        <Button size="sm" render={<Link to="/websites/new" />}>
+          <PlusCircleIcon className="h-3.5 w-3.5" />
+          Buat Website
         </Button>
       </div>
 
-      <div className="flex-1 p-3">
-        {/* Loading state */}
-        {isLoading && (
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="animate-pulse rounded-md border bg-card p-3"
-              >
-                <div className="mb-2 h-4 w-2/3 rounded bg-muted" />
-                <div className="mb-3 h-3 w-1/3 rounded bg-muted" />
-                <div className="mb-4 h-3 w-full rounded bg-muted" />
-                <div className="h-8 w-full rounded bg-muted" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Error state */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {/* Error banner */}
         {!isLoading && errorMessage && (
-          <div className="flex items-center justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             <div className="flex items-center gap-2">
               <AlertCircleIcon className="h-4 w-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="shrink-0 border-red-300 bg-white hover:bg-red-100"
-              onClick={() => void onRetry()}
-            >
+            <Button size="sm" variant="outline" onClick={() => void onRetry()}>
               <RefreshCwIcon className="h-3.5 w-3.5" />
               Coba Lagi
             </Button>
           </div>
         )}
 
+        {/* Loading skeletons */}
+        {isLoading && (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-lg border bg-card p-4">
+                <Skeleton className="mb-2 h-4 w-2/3" />
+                <Skeleton className="mb-1 h-3 w-1/3" />
+                <Skeleton className="mb-4 h-3 w-full" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 flex-1" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Empty state */}
         {!isLoading && !errorMessage && websites.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-background/50 py-10 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+          <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed bg-background/50 py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <GlobeIcon className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
               <p className="text-sm font-medium">Belum ada website</p>
-              <p className="text-xs text-muted-foreground">
-                Buat website pertama dari salah satu template kamu.
-              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Buat website dari salah satu template yang tersedia.</p>
             </div>
-            <Button nativeButton={false} render={<Link to="/websites/new" />} size="sm">
+            <Button size="sm" render={<Link to="/websites/new" />}>
               <PlusCircleIcon className="h-3.5 w-3.5" />
-              Add Website
+              Buat Website
             </Button>
           </div>
         )}
 
-        {/* Website grid */}
+        {/* Grid */}
         {!isLoading && !errorMessage && websites.length > 0 && (
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {websites.map((website) => (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {websites.map((site) => (
               <article
-                key={website.id}
-                className="flex flex-col rounded-md border bg-card p-3 text-card-foreground shadow-sm transition-shadow hover:shadow-md"
+                key={site.id}
+                className="group flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md"
               >
-                <h2 className="line-clamp-1 text-base font-semibold">
-                  {website.name}
-                </h2>
+                <div className="flex-1 p-4">
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <h2 className="line-clamp-1 text-sm font-semibold">{site.name}</h2>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        className="-mr-1 -mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 focus:outline-none"
+                        aria-label="Opsi"
+                      >
+                        <MoreHorizontalIcon className="h-4 w-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem onClick={() => navigate(`/websites/${site.id}`)}>
+                          <EyeIcon className="h-3.5 w-3.5" /> Detail
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/websites/${site.id}/edit`)}>
+                          <EditIcon className="h-3.5 w-3.5" /> Edit
+                        </DropdownMenuItem>
+                        {site.domain && (
+                          <DropdownMenuItem onClick={() => window.open(`https://${site.domain}/editor?page_id=${site.id}`, "_blank")}>
+                            <FilePenIcon className="h-3.5 w-3.5" /> Buka Editor
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={deletingId === site.id}
+                          onClick={() => void handleDelete(site)}
+                        >
+                          <TrashIcon className="h-3.5 w-3.5" />
+                          {deletingId === site.id ? "Menghapus..." : "Hapus"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
 
-                {website.domain ? (
-                  <a
-                    href={`https://${website.domain}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mb-2 inline-flex w-fit items-center gap-1 text-xs text-sidebar-primary hover:underline"
-                  >
-                    {website.domain}
-                    <ExternalLinkIcon className="h-3 w-3" />
-                  </a>
-                ) : (
-                  <p className="mb-2 text-xs text-muted-foreground">Tanpa domain</p>
-                )}
+                  {site.domain ? (
+                    <a
+                      href={`https://${site.domain}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mb-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      {site.domain}
+                      <ExternalLinkIcon className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <p className="mb-2 text-xs text-muted-foreground">Tanpa domain</p>
+                  )}
 
-                <p className="mb-3 line-clamp-2 flex-1 text-sm text-muted-foreground">
-                  {website.description || "Tanpa deskripsi"}
-                </p>
+                  <p className="line-clamp-2 text-xs text-muted-foreground">
+                    {site.description || "Tanpa deskripsi"}
+                  </p>
+                </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex gap-2 border-t px-4 py-3">
                   <Button
                     variant="outline"
+                    size="sm"
                     className="flex-1"
-                    render={<Link to={`/websites/${website.id}`} />}
+                    render={<Link to={`/websites/${site.id}`} />}
                   >
-                    <EyeIcon />
+                    <EyeIcon className="h-3.5 w-3.5" />
                     Detail
                   </Button>
                   <Button
                     variant="outline"
+                    size="sm"
                     className="flex-1"
-                    render={<a href={`https://${website.domain}/editor?page_id=${website.id}`} target="_blank" rel="noreferrer" />}
+                    render={<Link to={`/websites/${site.id}/edit`} />}
                   >
-                    <FilePenIcon />
-                    Editor
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      if (confirm(`Apakah Anda yakin ingin menghapus website "${website.name}"?`)) {
-                        void onDelete(website.id)
-                      }
-                    }}
-                  >
-                    <TrashIcon />
-                    Delete
+                    <EditIcon className="h-3.5 w-3.5" />
+                    Edit
                   </Button>
                 </div>
               </article>

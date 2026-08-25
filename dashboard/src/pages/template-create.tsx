@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { PageToast, useToast } from "@/components/page-toast"
+import { useMonacoTheme } from "@/hooks/use-monaco-theme"
 import type { TemplateItem } from "@/types/cms"
 import {
   LayoutTemplateIcon,
   FileTextIcon,
-  CheckCircle2Icon,
   AlertCircleIcon,
   SaveIcon,
+  Loader2Icon,
 } from "lucide-react"
 
 const DEFAULT_JSON = `{
@@ -33,8 +35,6 @@ const DEFAULT_HTML = `<!doctype html>
   </body>
 </html>`
 
-type SaveResult = { ok: boolean; message?: string }
-
 export interface TemplateSavePayload {
   name: string
   description: string
@@ -43,7 +43,7 @@ export interface TemplateSavePayload {
 }
 
 interface TemplateCreatePageProps {
-  onSave: (payload: TemplateSavePayload) => Promise<SaveResult>
+  onSave: (payload: TemplateSavePayload) => Promise<{ ok: boolean; message?: string }>
   initialTemplate?: TemplateItem
   mode?: "create" | "edit"
 }
@@ -57,57 +57,34 @@ const editorOptions = {
   padding: { top: 12 },
 } as const
 
-/** Keeps Monaco's theme in sync with the app's light/dark mode (class-based). */
-function useMonacoTheme() {
-  const [theme, setTheme] = React.useState<"vs-dark" | "light">(() =>
-    document.documentElement.classList.contains("dark") ? "vs-dark" : "light",
-  )
-
-  React.useEffect(() => {
-    const root = document.documentElement
-    const observer = new MutationObserver(() => {
-      setTheme(root.classList.contains("dark") ? "vs-dark" : "light")
-    })
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
-    return () => observer.disconnect()
-  }, [])
-
-  return theme
-}
-
 export default function TemplateCreatePage({ onSave, initialTemplate, mode = "create" }: TemplateCreatePageProps) {
+  const monacoTheme = useMonacoTheme()
+  const { toast, showToast, dismissToast } = useToast()
+
   const [name, setName] = React.useState(initialTemplate?.name ?? "")
   const [description, setDescription] = React.useState(initialTemplate?.description ?? "")
   const [jsonValue, setJsonValue] = React.useState(
-    initialTemplate ? JSON.stringify(initialTemplate.data, null, 2) : DEFAULT_JSON
+    initialTemplate ? JSON.stringify(initialTemplate.data, null, 2) : DEFAULT_JSON,
   )
   const [htmlValue, setHtmlValue] = React.useState(initialTemplate?.html ?? DEFAULT_HTML)
   const [jsonError, setJsonError] = React.useState<string | null>(null)
   const [isSaving, setIsSaving] = React.useState(false)
-  const [saveMessage, setSaveMessage] = React.useState<
-    { type: "success" | "error"; text: string } | null
-  >(null)
-  const monacoTheme = useMonacoTheme()
 
   async function handleSave() {
-    setSaveMessage(null)
+    setJsonError(null)
 
     if (!name.trim()) {
-      setSaveMessage({ type: "error", text: "Nama template wajib diisi" })
+      showToast("error", "Nama template wajib diisi")
       return
     }
 
     let parsedData: unknown
     try {
       parsedData = JSON.parse(jsonValue)
-      setJsonError(null)
     } catch (error) {
       const message = error instanceof Error ? error.message : "JSON tidak valid"
       setJsonError(message)
-      setSaveMessage({
-        type: "error",
-        text: "Data JSON tidak valid - cek tab Data",
-      })
+      showToast("error", "Data JSON tidak valid — cek tab Data")
       return
     }
 
@@ -120,73 +97,62 @@ export default function TemplateCreatePage({ onSave, initialTemplate, mode = "cr
     })
     setIsSaving(false)
 
-    setSaveMessage(
-      result.ok
-        ? { type: "success", text: "Template berhasil disimpan" }
-        : { type: "error", text: result.message || "Gagal menyimpan template" }
-    )
+    if (result.ok) {
+      showToast("success", mode === "edit" ? "Template berhasil diperbarui" : "Template berhasil dibuat")
+    } else {
+      showToast("error", result.message || "Gagal menyimpan template")
+    }
   }
 
   return (
     <div className="flex h-screen flex-1 flex-col overflow-hidden">
+      <PageToast message={toast} onDismiss={dismissToast} />
+
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 border-b bg-background px-3 py-2">
-        <div className="flex items-center gap-2.5">
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b bg-background px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <LayoutTemplateIcon className="h-4 w-4" />
           </div>
-          <div>
-            <h1 className="text-base font-semibold leading-tight">
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold leading-tight">
               {mode === "edit" ? "Edit Template" : "Buat Template"}
             </h1>
-            <p className="text-xs text-muted-foreground">
-              Isi detail, data JSON, dan markup HTML untuk template ini.
+            <p className="truncate text-xs text-muted-foreground">
+              {mode === "edit" && initialTemplate ? initialTemplate.name : "Isi detail, data JSON, dan markup HTML."}
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={isSaving}>
-          <SaveIcon />
-          {isSaving ? "Menyimpan..." : "Save"}
+        <Button size="sm" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <SaveIcon className="h-3.5 w-3.5" />}
+          {isSaving ? "Menyimpan..." : "Simpan"}
         </Button>
       </div>
 
-      {saveMessage && (
-        <div
-          className={
-            saveMessage.type === "success"
-              ? "mx-3 mt-3 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-300"
-              : "mx-3 mt-3 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
-          }
-        >
-          {saveMessage.type === "success" ? (
-            <CheckCircle2Icon className="h-4 w-4 shrink-0" />
-          ) : (
-            <AlertCircleIcon className="h-4 w-4 shrink-0" />
-          )}
-          {saveMessage.text}
-        </div>
-      )}
-
       {/* Body */}
-      <div className="grid flex-1 grid-cols-1 gap-3 overflow-hidden p-3 xl:grid-cols-[320px_1fr]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden p-3 xl:grid-cols-[300px_1fr]">
         {/* Info panel */}
-        <div className="space-y-3 rounded-md border bg-card p-3 text-card-foreground xl:overflow-y-auto">
+        <div className="space-y-4 overflow-y-auto rounded-lg border bg-card p-4 text-card-foreground">
           <div className="space-y-1.5">
-            <Label htmlFor="template-name">Nama</Label>
+            <Label htmlFor="tpl-name" className="text-xs font-medium">
+              Nama <span className="text-destructive">*</span>
+            </Label>
             <Input
-              id="template-name"
-              placeholder="mis. Landing Page Kelas Digital Marketing"
+              id="tpl-name"
+              placeholder="mis. Landing Page Kelas Online"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-
           <div className="space-y-1.5">
-            <Label htmlFor="template-description">Deskripsi</Label>
+            <Label htmlFor="tpl-desc" className="text-xs font-medium">
+              Deskripsi
+            </Label>
             <Textarea
-              id="template-description"
+              id="tpl-desc"
               placeholder="Deskripsi singkat tentang template ini"
-              rows={6}
+              rows={8}
+              className="resize-none"
               value={description}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
             />
@@ -195,44 +161,44 @@ export default function TemplateCreatePage({ onSave, initialTemplate, mode = "cr
 
         {/* Code panel */}
         <Tabs defaultValue="data" className="flex min-h-0 flex-col gap-2">
-          <TabsList className="w-fit">
-            <TabsTrigger value="data">
+          <TabsList className="w-fit shrink-0">
+            <TabsTrigger value="data" className="gap-1.5 text-xs">
               <FileTextIcon className="h-3.5 w-3.5" />
-              Data
+              Data JSON
             </TabsTrigger>
-            <TabsTrigger value="html">
+            <TabsTrigger value="html" className="gap-1.5 text-xs">
               <FileTextIcon className="h-3.5 w-3.5" />
               HTML
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="data" className="flex min-h-0 flex-1 flex-col gap-1.5">
-            <div className="h-full overflow-hidden rounded-md border">
+          <TabsContent value="data" className="flex min-h-0 flex-1 flex-col gap-2">
+            <div className="min-h-0 flex-1 overflow-hidden rounded-lg border">
               <Editor
                 height="100%"
                 language="json"
                 theme={monacoTheme}
                 value={jsonValue}
-                onChange={(value: string | undefined) => setJsonValue(value ?? "")}
+                onChange={(value) => setJsonValue(value ?? "")}
                 options={editorOptions}
               />
             </div>
             {jsonError && (
-              <p className="flex items-center gap-1.5 text-sm text-red-600">
+              <p className="flex shrink-0 items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                 <AlertCircleIcon className="h-3.5 w-3.5 shrink-0" />
-                JSON tidak valid: {jsonError}
+                {jsonError}
               </p>
             )}
           </TabsContent>
 
           <TabsContent value="html" className="min-h-0 flex-1">
-            <div className="h-full overflow-hidden rounded-md border">
+            <div className="h-full overflow-hidden rounded-lg border">
               <Editor
                 height="100%"
                 language="html"
                 theme={monacoTheme}
                 value={htmlValue}
-                onChange={(value: string | undefined) => setHtmlValue(value ?? "")}
+                onChange={(value) => setHtmlValue(value ?? "")}
                 options={editorOptions}
               />
             </div>

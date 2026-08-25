@@ -50,6 +50,8 @@ export default function AppRoutes() {
     void loadWebsites()
   }, [loadTemplates, loadWebsites])
 
+  // ── Template handlers ──────────────────────────────────────────────────────
+
   async function onSaveTemplate(payload: TemplateSavePayload) {
     try {
       const created = await createTemplate(payload)
@@ -82,6 +84,8 @@ export default function AppRoutes() {
     }
   }
 
+  // ── Website handlers ───────────────────────────────────────────────────────
+
   async function onSaveWebsite(payload: WebsiteSavePayload) {
     try {
       const created = await createWebsite(payload)
@@ -106,6 +110,8 @@ export default function AppRoutes() {
       return { ok: false as const, message: error instanceof Error ? error.message : "Gagal menghapus website" }
     }
   }
+
+  // ── Inline route components ────────────────────────────────────────────────
 
   function WebsiteCreateRoute() {
     const [params] = useSearchParams()
@@ -137,20 +143,40 @@ export default function AppRoutes() {
         }
       }
       void run()
-      return () => {
-        cancelled = true
-      }
+      return () => { cancelled = true }
     }, [id])
 
-    if (isLoading) return <div className="px-4 text-sm text-muted-foreground">Memuat template...</div>
-    if (!template) return <div className="px-4 text-sm text-muted-foreground">Template tidak ditemukan.</div>
+    if (isLoading) {
+      return (
+        <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+          Memuat template...
+        </div>
+      )
+    }
+    if (!template) {
+      return (
+        <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+          Template tidak ditemukan.
+        </div>
+      )
+    }
 
-    return <TemplateCreatePage mode="edit" initialTemplate={template} onSave={(payload) => onUpdateTemplate(template.id, payload)} />
+    return (
+      <TemplateCreatePage
+        mode="edit"
+        initialTemplate={template}
+        onSave={(payload) => onUpdateTemplate(template.id, payload)}
+      />
+    )
   }
+
+  // ── Routes ─────────────────────────────────────────────────────────────────
 
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/templates" replace />} />
+
+      {/* Templates */}
       <Route
         path="/templates"
         element={
@@ -165,7 +191,12 @@ export default function AppRoutes() {
       />
       <Route path="/templates/new" element={<TemplateCreatePage onSave={onSaveTemplate} />} />
       <Route path="/templates/:id/edit" element={<TemplateEditRoute />} />
-      <Route path="/templates/:id" element={<TemplateDetailPage templates={templates} onDelete={onDeleteTemplate} />} />
+      <Route
+        path="/templates/:id"
+        element={<TemplateDetailPage templates={templates} onDelete={onDeleteTemplate} />}
+      />
+
+      {/* Websites */}
       <Route
         path="/websites"
         element={
@@ -183,7 +214,11 @@ export default function AppRoutes() {
         path="/websites/:id/edit"
         element={<WebsiteEditPage websites={websites} onUpdate={onUpdateWebsiteState} />}
       />
-      <Route path="/websites/:id" element={<WebsiteDetailPage websites={websites} />} />
+      <Route
+        path="/websites/:id"
+        element={<WebsiteDetailPage websites={websites} onDelete={onDeleteWebsite} />}
+      />
+
       <Route path="*" element={<Navigate to="/templates" replace />} />
     </Routes>
   )
