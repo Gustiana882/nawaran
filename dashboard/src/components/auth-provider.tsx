@@ -2,9 +2,16 @@ import * as React from "react"
 
 import keycloak from "@/lib/keycloak"
 
+export type AuthUser = {
+  name: string
+  email: string
+  username: string
+}
+
 type AuthContextValue = {
   authenticated: boolean
   token: string | undefined
+  user: AuthUser
   login: () => Promise<void>
   logout: () => Promise<void>
   refreshToken: () => Promise<string | undefined>
@@ -61,6 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     authenticated,
     token,
+    user: {
+      name: [keycloak.tokenParsed?.given_name, keycloak.tokenParsed?.family_name]
+        .filter(Boolean)
+        .join(" ") || keycloak.tokenParsed?.preferred_username || "User",
+      email: keycloak.tokenParsed?.email ?? "",
+      username: keycloak.tokenParsed?.preferred_username ?? "",
+    },
     login: async () => {
       await keycloak.login()
     },
