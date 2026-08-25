@@ -123,7 +123,7 @@ export default function TemplateCreatePage({ onSave, initialTemplate, mode = "cr
             </p>
           </div>
         </div>
-        <Button size="sm" onClick={handleSave} disabled={isSaving}>
+        <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <SaveIcon className="h-3.5 w-3.5" />}
           {isSaving ? "Menyimpan..." : "Simpan"}
         </Button>

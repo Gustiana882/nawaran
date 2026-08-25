@@ -60,7 +60,7 @@ export default function TemplateDetailPage({ templates, onDelete }: TemplateDeta
       } catch (error) {
         if (!cancelled) setFetchError(error instanceof Error ? error.message : "Template tidak ditemukan.")
       } finally {
-        if (!cancelled) setIsLoading(false)
+        setIsLoading(false)
       }
     }
     void run()
@@ -107,15 +107,15 @@ export default function TemplateDetailPage({ templates, onDelete }: TemplateDeta
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button size="sm" variant="outline" render={<Link to={`/websites/new?templateId=${template.id}`} />}>
+          <Button nativeButton={false} variant="outline" render={<Link to={`/websites/new?templateId=${template.id}`} />}>
             <GlobeIcon className="h-3.5 w-3.5" />
             Buat Website
           </Button>
-          <Button size="sm" variant="outline" render={<Link to={`/templates/${template.id}/edit`} />}>
+          <Button nativeButton={false} variant="outline" render={<Link to={`/templates/${template.id}/edit`} />}>
             <EditIcon className="h-3.5 w-3.5" />
             Edit
           </Button>
-          <Button size="sm" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <TrashIcon className="h-3.5 w-3.5" />}
             {isDeleting ? "Menghapus..." : "Hapus"}
           </Button>

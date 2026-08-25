@@ -64,7 +64,7 @@ export default function TemplatesPage({
             <p className="text-xs text-muted-foreground">Kelola template halaman landing.</p>
           </div>
         </div>
-        <Button size="sm" render={<Link to="/templates/new" />}>
+        <Button nativeButton={false} render={<Link to="/templates/new" />}>
           <PlusCircleIcon className="h-3.5 w-3.5" />
           Buat Template
         </Button>
@@ -78,7 +78,7 @@ export default function TemplatesPage({
               <AlertCircleIcon className="h-4 w-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
-            <Button size="sm" variant="outline" onClick={() => void onRetry()}>
+            <Button nativeButton={false} variant="outline" onClick={() => void onRetry()}>
               <RefreshCwIcon className="h-3.5 w-3.5" />
               Coba Lagi
             </Button>
@@ -112,7 +112,7 @@ export default function TemplatesPage({
               <p className="text-sm font-medium">Belum ada template</p>
               <p className="mt-0.5 text-xs text-muted-foreground">Mulai dengan membuat template pertama Anda.</p>
             </div>
-            <Button size="sm" render={<Link to="/templates/new" />}>
+            <Button nativeButton={false} render={<Link to="/templates/new" />}>
               <PlusCircleIcon className="h-3.5 w-3.5" />
               Buat Template
             </Button>
@@ -164,7 +164,7 @@ export default function TemplatesPage({
                 <div className="border-t px-4 py-3">
                   <Button
                     variant="outline"
-                    size="sm"
+                    nativeButton={false}
                     className="w-full"
                     render={<Link to={`/websites/new?templateId=${tpl.id}`} />}
                   >

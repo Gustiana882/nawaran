@@ -118,11 +118,11 @@ export default function WebsiteEditPage({ websites, onUpdate }: WebsiteEditPageP
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => navigate(-1)}>
+          <Button variant="outline" onClick={() => navigate(-1)}>
             <ArrowLeftIcon className="h-3.5 w-3.5" />
             Batal
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <SaveIcon className="h-3.5 w-3.5" />}
             {isSaving ? "Menyimpan..." : "Simpan"}
           </Button>

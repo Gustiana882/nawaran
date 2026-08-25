@@ -65,7 +65,7 @@ export default function WebsitesPage({
             <p className="text-xs text-muted-foreground">Kelola website yang dibuat dari template.</p>
           </div>
         </div>
-        <Button size="sm" render={<Link to="/websites/new" />}>
+        <Button nativeButton={false} render={<Link to="/websites/new" />}>
           <PlusCircleIcon className="h-3.5 w-3.5" />
           Buat Website
         </Button>
@@ -79,7 +79,7 @@ export default function WebsitesPage({
               <AlertCircleIcon className="h-4 w-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
-            <Button size="sm" variant="outline" onClick={() => void onRetry()}>
+            <Button variant="outline" onClick={() => void onRetry()}>
               <RefreshCwIcon className="h-3.5 w-3.5" />
               Coba Lagi
             </Button>
@@ -113,7 +113,7 @@ export default function WebsitesPage({
               <p className="text-sm font-medium">Belum ada website</p>
               <p className="mt-0.5 text-xs text-muted-foreground">Buat website dari salah satu template yang tersedia.</p>
             </div>
-            <Button size="sm" render={<Link to="/websites/new" />}>
+            <Button nativeButton={false} render={<Link to="/websites/new" />}>
               <PlusCircleIcon className="h-3.5 w-3.5" />
               Buat Website
             </Button>
@@ -185,7 +185,7 @@ export default function WebsitesPage({
                 <div className="flex gap-2 border-t px-4 py-3">
                   <Button
                     variant="outline"
-                    size="sm"
+                    nativeButton={false}
                     className="flex-1"
                     render={<Link to={`/websites/${site.id}`} />}
                   >
@@ -194,7 +194,7 @@ export default function WebsitesPage({
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    nativeButton={false}
                     className="flex-1"
                     render={<Link to={`/websites/${site.id}/edit`} />}
                   >

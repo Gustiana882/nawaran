@@ -75,7 +75,7 @@ export default function WebsiteCreatePage({ template, onSave }: WebsiteCreatePag
             <p className="text-xs text-muted-foreground">Website baru dari template yang dipilih.</p>
           </div>
         </div>
-        <Button size="sm" onClick={handleSave} disabled={isSaving}>
+        <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <SaveIcon className="h-3.5 w-3.5" />}
           {isSaving ? "Menyimpan..." : "Simpan"}
         </Button>
