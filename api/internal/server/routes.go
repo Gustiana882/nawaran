@@ -22,8 +22,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 	mux.HandleFunc("/websocket", s.websocketHandler)
 
 	mux.Handle("/api/websites/save", s.protected(http.HandlerFunc(s.handleSave)))
-
 	mux.Handle("/api/websites", s.protected(http.HandlerFunc(s.handleListWebsites)))
+	mux.Handle("/api/websites/{id}", s.protected(http.HandlerFunc(s.handleDeleteWebsite)))
+	mux.Handle("/api/websites/{id}/update", s.protected(http.HandlerFunc(s.handleUpdateWebsite)))
 
 	mux.HandleFunc("/api/websites/data", s.handleGetData)
 

@@ -13,7 +13,6 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { GalleryVerticalEndIcon, LayoutTemplateIcon, GlobeIcon } from "lucide-react"
-import { ModeToggle } from "./mode-toggle"
 
 // This is sample data.
 const data = {
@@ -55,7 +54,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <span className="truncate font-medium">{data.teams.name}</span>
                 <span className="truncate text-xs">{data.teams.plan}</span>
               </div>
-            <ModeToggle />
+            {/* <ModeToggle /> */}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

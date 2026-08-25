@@ -15,11 +15,14 @@ import (
 )
 
 type Websites struct {
-	ID        int        `json:"id"`
-	UUID      string     `json:"uuid"`
-	Data      string     `json:"data"`
-	HTML      string     `json:"html"`
-	UpdatedAt *time.Time `json:"updated_at"`
+	ID          int              `json:"id"`
+	UUID        string           `json:"uuid"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Domain      string           `json:"domain"`
+	Data        json.RawMessage  `json:"data"`
+	HTML        string           `json:"html"`
+	UpdatedAt   *time.Time       `json:"updated_at"`
 }
 
 // SavePayload harus persis sama dengan yang dikirim InlineEditor lewat
@@ -64,7 +67,7 @@ func (p SavePayload) id() string {
 
 func (s *service) ListWebsites(ctx context.Context) ([]Websites, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT uuid, id, data, html, updated_at
+		SELECT uuid, id, domain, name, description, data, html, updated_at
 		FROM websites
 		ORDER BY updated_at DESC
 	`)
@@ -76,9 +79,17 @@ func (s *service) ListWebsites(ctx context.Context) ([]Websites, error) {
 	websites := make([]Websites, 0)
 	for rows.Next() {
 		var website Websites
-		if err := rows.Scan(&website.UUID, &website.ID, &website.Data, &website.HTML, &website.UpdatedAt); err != nil {
+		var name, description, domain, htmlVal sql.NullString
+		if err := rows.Scan(
+			&website.UUID, &website.ID, &domain, &name, &description,
+			&website.Data, &htmlVal, &website.UpdatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("scan website: %w", err)
 		}
+		website.Name = name.String
+		website.Description = description.String
+		website.Domain = domain.String
+		website.HTML = htmlVal.String
 		websites = append(websites, website)
 	}
 	if err := rows.Err(); err != nil {
@@ -89,46 +100,27 @@ func (s *service) ListWebsites(ctx context.Context) ([]Websites, error) {
 }
 
 func (s *service) CreateWebsite(ctx context.Context, input CreateWebsiteInput) (*Websites, error) {
+
+	// Ambil template dari DB, supaya bisa menyalin data JSONB + HTML ke website baru.
 	var rawData []byte
 	var html string
-	err := s.db.QueryRowContext(ctx, `
-		SELECT data, html
-		FROM templates
-		WHERE uuid = $1
-	`, input.TemplateUUID).Scan(&rawData, &html)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("template %s tidak ditemukan", input.TemplateUUID)
-	}
-	if err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT data, html FROM templates WHERE uuid = $1`, input.TemplateUUID).Scan(&rawData, &html); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("template %s tidak ditemukan", input.TemplateUUID)
+		}
 		return nil, fmt.Errorf("get template for website: %w", err)
 	}
 
-	var data map[string]any
-	if err := json.Unmarshal(rawData, &data); err != nil {
-		return nil, fmt.Errorf("parse template data: %w", err)
-	}
-	if data == nil {
-		data = make(map[string]any)
-	}
-	data["name"] = input.Name
-	data["description"] = input.Description
-	data["domain"] = input.Domain
-
-	websiteData, err := json.Marshal(data)
-	if err != nil {
-		return nil, fmt.Errorf("marshal website data: %w", err)
-	}
-
+	// Buat website baru dengan UUID baru, domain, nama, deskripsi, data JSONB, dan HTML dari template.
 	websiteUUID := uuid.NewString()
 	var website Websites
-	err = s.db.QueryRowContext(ctx, `
-		INSERT INTO websites (uuid, data, html, updated_at)
-		VALUES ($1, $2::jsonb, $3, now())
-		RETURNING id, uuid, data, html, updated_at
-	`, websiteUUID, websiteData, html).Scan(
-		&website.ID, &website.UUID, &website.Data, &website.HTML, &website.UpdatedAt,
-	)
-	if err != nil {
+	if err := s.db.QueryRowContext(ctx, `
+		INSERT INTO websites (uuid, domain, name, description, data, html, updated_at)
+		VALUES ($1, $2, $3, $4, $5::jsonb, $6, now())
+		RETURNING id, uuid, domain, name, description, data, html, updated_at
+	`, websiteUUID, input.Domain, input.Name, input.Description, rawData, html).Scan(
+		&website.ID, &website.UUID, &website.Domain, &website.Name, &website.Description, &website.Data, &website.HTML, &website.UpdatedAt,
+	); err != nil {
 		return nil, fmt.Errorf("create website: %w", err)
 	}
 
@@ -385,4 +377,74 @@ func removeItemsByIndex(items []map[string]any, ids []string) []map[string]any {
 		}
 	}
 	return filtered
+}
+
+// DeleteWebsite menghapus website berdasarkan UUID.
+func (s *service) DeleteWebsite(ctx context.Context, websiteUUID string) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM websites WHERE uuid = $1`, websiteUUID)
+	if err != nil {
+		return fmt.Errorf("delete website: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteUUID)
+	}
+
+	return nil
+}
+
+type UpdateWebsiteInput struct {
+	ID          string
+	Name        string
+	Description string
+	Domain      string
+	Data        []byte
+	HTML        string
+}
+
+// UpdateWebsite memperbarui website berdasarkan UUID.
+func (s *service) UpdateWebsite(ctx context.Context, input UpdateWebsiteInput) (*Websites, error) {
+	// Jika data/html tidak dikirim, ambil nilai existing dari DB dulu
+	if len(input.Data) == 0 && input.HTML == "" {
+		var website Websites
+		err := s.db.QueryRowContext(ctx, `
+			UPDATE websites 
+			SET name = $1, description = $2, domain = $3, updated_at = now()
+			WHERE uuid = $4
+			RETURNING id, uuid, domain, name, description, data, html, updated_at
+		`, input.Name, input.Description, input.Domain, input.ID).Scan(
+			&website.ID, &website.UUID, &website.Domain, &website.Name, &website.Description, &website.Data, &website.HTML, &website.UpdatedAt,
+		)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %s", ErrWebsiteNotFound, input.ID)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("update website: %w", err)
+		}
+		return &website, nil
+	}
+
+	var website Websites
+	err := s.db.QueryRowContext(ctx, `
+		UPDATE websites 
+		SET name = $1, description = $2, domain = $3, data = $4::jsonb, html = $5, updated_at = now()
+		WHERE uuid = $6
+		RETURNING id, uuid, domain, name, description, data, html, updated_at
+	`, input.Name, input.Description, input.Domain, input.Data, input.HTML, input.ID).Scan(
+		&website.ID, &website.UUID, &website.Domain, &website.Name, &website.Description, &website.Data, &website.HTML, &website.UpdatedAt,
+	)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: %s", ErrWebsiteNotFound, input.ID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("update website: %w", err)
+	}
+
+	return &website, nil
 }

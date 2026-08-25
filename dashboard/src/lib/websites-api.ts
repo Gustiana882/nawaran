@@ -4,6 +4,9 @@ import { authorizedFetch } from "@/lib/api-client"
 type WebsiteApiItem = {
   uuid: string
   id: number
+  name: string
+  description: string
+  domain: string
   data: unknown
   html: string
   updated_at: string
@@ -21,11 +24,30 @@ type CreateWebsiteResponse = {
   message?: string
 }
 
+type DeleteWebsiteResponse = {
+  ok: boolean
+  message?: string
+}
+
+type UpdateWebsiteResponse = {
+  ok: boolean
+  website?: WebsiteApiItem
+  message?: string
+}
+
 export type WebsiteCreateInput = {
   name: string
   description: string
   domain: string
   template_uuid: string
+}
+
+export type WebsiteUpdateInput = {
+  name: string
+  description: string
+  domain: string
+  data: unknown
+  html: string
 }
 
 const API_BASE_URL = "http://localhost:8080/api"
@@ -39,9 +61,9 @@ function getDataValue(data: unknown, key: string): string {
 function toWebsiteItem(item: WebsiteApiItem): WebsiteItem {
   return {
     id: item.uuid,
-    name: getDataValue(item.data, "name") || getDataValue(item.data, "title") || `Website ${item.id}`,
-    description: getDataValue(item.data, "description"),
-    domain: getDataValue(item.data, "domain"),
+    name: item.name || getDataValue(item.data, "name") || getDataValue(item.data, "title") || `Website ${item.id}`,
+    description: item.description || getDataValue(item.data, "description"),
+    domain: item.domain || getDataValue(item.data, "domain"),
     data: item.data,
     html: item.html,
     createdAt: item.updated_at,
@@ -81,4 +103,31 @@ export async function createWebsite(input: WebsiteCreateInput): Promise<WebsiteI
     ...body.website,
     data: parseData(body.website.data),
   })
+}
+
+export async function updateWebsite(id: string, input: WebsiteUpdateInput): Promise<WebsiteItem> {
+  const res = await authorizedFetch(`${API_BASE_URL}/websites/${id}/update`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  })
+  const body = (await res.json()) as UpdateWebsiteResponse
+  if (!res.ok || !body.ok || !body.website) {
+    throw new Error(body.message || "Gagal memperbarui website")
+  }
+
+  return toWebsiteItem({
+    ...body.website,
+    data: parseData(body.website.data),
+  })
+}
+
+export async function deleteWebsite(id: string): Promise<void> {
+  const res = await authorizedFetch(`${API_BASE_URL}/websites/${id}`, {
+    method: "DELETE",
+  })
+  const body = (await res.json()) as DeleteWebsiteResponse
+  if (!res.ok || !body.ok) {
+    throw new Error(body.message || "Gagal menghapus website")
+  }
 }

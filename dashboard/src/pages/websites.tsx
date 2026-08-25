@@ -9,7 +9,8 @@ import {
   ExternalLinkIcon,
   RefreshCwIcon,
   AlertCircleIcon,
-  FilePenIcon
+  FilePenIcon,
+  TrashIcon
 } from "lucide-react"
 
 interface WebsitesPageProps {
@@ -17,6 +18,7 @@ interface WebsitesPageProps {
   isLoading: boolean
   errorMessage: string | null
   onRetry: () => Promise<void>
+  onDelete: (id: string) => Promise<{ ok: boolean; message?: string }>
 }
 
 export default function WebsitesPage({
@@ -24,6 +26,7 @@ export default function WebsitesPage({
   isLoading,
   errorMessage,
   onRetry,
+  onDelete,
 }: WebsitesPageProps) {
   return (
     <div className="flex flex-1 flex-col bg-muted/20">
@@ -148,6 +151,18 @@ export default function WebsitesPage({
                   >
                     <FilePenIcon />
                     Editor
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      if (confirm(`Apakah Anda yakin ingin menghapus website "${website.name}"?`)) {
+                        void onDelete(website.id)
+                      }
+                    }}
+                  >
+                    <TrashIcon />
+                    Delete
                   </Button>
                 </div>
               </article>

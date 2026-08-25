@@ -38,6 +38,12 @@ type Service interface {
 	// CreateWebsite creates a website from an existing template.
 	CreateWebsite(ctx context.Context, input CreateWebsiteInput) (*Websites, error)
 
+	// UpdateWebsite updates an existing website.
+	UpdateWebsite(ctx context.Context, input UpdateWebsiteInput) (*Websites, error)
+
+	// DeleteWebsite deletes a website by UUID.
+	DeleteWebsite(ctx context.Context, websiteUUID string) error
+
 	ListTemplates(ctx context.Context) ([]Template, error)
 	GetTemplateByID(ctx context.Context, id string) (*Template, error)
 	CreateTemplate(ctx context.Context, input CreateTemplateInput) (*Template, error)

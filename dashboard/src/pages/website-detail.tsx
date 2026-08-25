@@ -1,11 +1,13 @@
 import * as React from "react"
 import Editor from "@monaco-editor/react"
-import { useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
 import type { WebsiteItem } from "@/types/cms"
-import { GlobeIcon, FileTextIcon } from "lucide-react"
+import { GlobeIcon, FileTextIcon, TrashIcon, EditIcon } from "lucide-react"
+import { deleteWebsite } from "@/lib/websites-api"
 
 interface WebsiteDetailPageProps {
   websites: WebsiteItem[]
@@ -41,8 +43,20 @@ function useMonacoTheme() {
 
 export default function WebsiteDetailPage({ websites }: WebsiteDetailPageProps) {
   const { id } = useParams()
+  const navigate = useNavigate()
   const website = React.useMemo(() => websites.find((item) => item.id === id), [websites, id])
   const monacoTheme = useMonacoTheme()
+
+  const handleDelete = async () => {
+    if (confirm(`Apakah Anda yakin ingin menghapus website "${website?.name}"?`)) {
+      try {
+        await deleteWebsite(id!)
+        navigate("/websites")
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Gagal menghapus website")
+      }
+    }
+  }
 
   if (!website) {
     return (
@@ -55,15 +69,27 @@ export default function WebsiteDetailPage({ websites }: WebsiteDetailPageProps) 
   return (
     <div className="flex h-screen flex-1 flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b bg-background px-4 py-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <GlobeIcon className="h-5 w-5" />
+      <div className="flex items-center justify-between gap-4 border-b bg-background px-3 py-2">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <GlobeIcon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold leading-tight">{website.name}</h1>
+            <p className="truncate text-xs text-muted-foreground">
+              {website.description || "Tanpa deskripsi"}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold leading-tight">{website.name}</h1>
-          <p className="truncate text-xs text-muted-foreground">
-            {website.description || "Tanpa deskripsi"}
-          </p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleDelete}>
+            <TrashIcon />
+            Delete
+          </Button>
+          <Button render={<Link to={`/websites/${website.id}/edit`} />}>
+            <EditIcon />
+            Edit
+          </Button>
         </div>
       </div>
 

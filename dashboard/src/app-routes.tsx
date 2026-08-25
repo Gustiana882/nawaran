@@ -2,13 +2,14 @@ import * as React from "react"
 import { Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { createTemplate, deleteTemplate, getTemplateByID, listTemplates, updateTemplate } from "@/lib/templates-api"
-import { createWebsite, listWebsites } from "@/lib/websites-api"
+import { createWebsite, deleteWebsite, listWebsites } from "@/lib/websites-api"
 import type { TemplateItem, WebsiteItem } from "@/types/cms"
 import TemplateCreatePage, { type TemplateSavePayload } from "./pages/template-create"
 import TemplateDetailPage from "./pages/template-detail"
 import TemplatesPage from "./pages/templates"
 import WebsiteCreatePage, { type WebsiteSavePayload } from "./pages/website-create"
 import WebsiteDetailPage from "./pages/website-detail"
+import WebsiteEditPage from "./pages/website-edit"
 import WebsitesPage from "./pages/websites"
 
 export default function AppRoutes() {
@@ -92,6 +93,20 @@ export default function AppRoutes() {
     }
   }
 
+  function onUpdateWebsiteState(id: string, updated: WebsiteItem) {
+    setWebsites((prev) => prev.map((item) => (item.id === id ? updated : item)))
+  }
+
+  async function onDeleteWebsite(id: string) {
+    try {
+      await deleteWebsite(id)
+      setWebsites((prev) => prev.filter((item) => item.id !== id))
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal menghapus website" }
+    }
+  }
+
   function WebsiteCreateRoute() {
     const [params] = useSearchParams()
     const templateId = params.get("templateId")
@@ -125,7 +140,7 @@ export default function AppRoutes() {
       return () => {
         cancelled = true
       }
-    }, [id, templates])
+    }, [id])
 
     if (isLoading) return <div className="px-4 text-sm text-muted-foreground">Memuat template...</div>
     if (!template) return <div className="px-4 text-sm text-muted-foreground">Template tidak ditemukan.</div>
@@ -153,9 +168,21 @@ export default function AppRoutes() {
       <Route path="/templates/:id" element={<TemplateDetailPage templates={templates} onDelete={onDeleteTemplate} />} />
       <Route
         path="/websites"
-        element={<WebsitesPage websites={websites} isLoading={websitesLoading} errorMessage={websitesError} onRetry={loadWebsites} />}
+        element={
+          <WebsitesPage
+            websites={websites}
+            isLoading={websitesLoading}
+            errorMessage={websitesError}
+            onRetry={loadWebsites}
+            onDelete={onDeleteWebsite}
+          />
+        }
       />
       <Route path="/websites/new" element={<WebsiteCreateRoute />} />
+      <Route
+        path="/websites/:id/edit"
+        element={<WebsiteEditPage websites={websites} onUpdate={onUpdateWebsiteState} />}
+      />
       <Route path="/websites/:id" element={<WebsiteDetailPage websites={websites} />} />
       <Route path="*" element={<Navigate to="/templates" replace />} />
     </Routes>
