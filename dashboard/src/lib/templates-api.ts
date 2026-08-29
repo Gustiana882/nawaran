@@ -42,7 +42,7 @@ function toTemplateItem(item: TemplateApiItem): TemplateItem {
   }
 }
 
-const API_BASE_URL = "http://localhost:8080/api" // Replace with your actual API base URL
+const API_BASE_URL = "https://api.nawaran.id/api" // Replace with your actual API base URL
 
 export async function listTemplates(): Promise<TemplateItem[]> {
   const res = await authorizedFetch(`${API_BASE_URL}/templates`)

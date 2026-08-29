@@ -4,5 +4,15 @@
 
 https://app.nawaran.id {
     tls internal
-    reverse_proxy landing:8081
+    reverse_proxy landing:8080
+}
+
+https://editor.nawaran.id {
+    tls internal
+    reverse_proxy editor:8080
+}
+
+https://api.nawaran.id {
+    tls internal
+    reverse_proxy api:8080
 }

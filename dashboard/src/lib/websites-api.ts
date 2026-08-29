@@ -50,7 +50,7 @@ export type WebsiteUpdateInput = {
   html: string
 }
 
-const API_BASE_URL = "http://localhost:8080/api"
+const API_BASE_URL = "https://api.nawaran.id/api"
 
 function getDataValue(data: unknown, key: string): string {
   if (!data || typeof data !== "object" || Array.isArray(data)) return ""

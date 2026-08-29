@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	port := renderer.EnvOr("LANDING_PORT", "8080")
+	port := renderer.EnvOr("EDITOR_PORT", "8080")
 	apiURL := renderer.EnvOr("API_URL", "http://api:8080")
-	timeoutMS := renderer.EnvOr("LANDING_API_TIMEOUT_MS", "1500")
-	defaultID := renderer.EnvOr("LANDING_WEBSITE_ID", "-")
+	timeoutMS := renderer.EnvOr("EDITOR_API_TIMEOUT_MS", "1500")
+	defaultID := renderer.EnvOr("EDITOR_WEBSITE_ID", "-")
 	staticDir := renderer.ResolveStaticDir()
 	cacheDir := renderer.ResolveCacheDir()
 
@@ -22,10 +22,10 @@ func main() {
 		CacheDir:  cacheDir,
 		DefaultID: defaultID,
 		Timeout:   renderer.ParseTimeout(timeoutMS),
-		Editable:  false,
+		Editable:  true,
 	}))
 
-	println("Landing server running at http://localhost:" + port)
+	println("Editor server running at http://localhost:" + port)
 	println("Serving static assets from", filepath.Clean(staticDir))
 	println("Using cache directory", filepath.Clean(cacheDir))
 

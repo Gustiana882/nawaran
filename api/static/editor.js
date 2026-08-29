@@ -52,7 +52,7 @@
     defaultAddLabel: "+ Tambah item",
 
     // Endpoint API backend (lihat api/internal/server/websites.go).
-    apiUrl: "http://localhost:8080/api/websites/save",
+    apiUrl: "https://api.nawaran.id/api/websites/save",
 
     keycloakUrl: "http://localhost:8082",
     keycloakRealm: "nawaran",

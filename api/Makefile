@@ -1,55 +1,33 @@
-# Simple Makefile for a Go project
+# Makefile for nawaran API, landing, and editor
 
-# Build the application
+# ── Build ──────────────────────────────────────────────────────────────────────
 all: build test
 
 build:
-	@echo "Building..."
-	
-	
-	@go build -o main.exe cmd/api/main.go
+	@echo "Building API..."
+	@go build -o main.exe ./cmd/api
 
 build-landing:
 	@echo "Building landing..."
-	@go build -o landing.exe cmd/landing/main.go
+	@go build -o landing.exe ./cmd/landing
 
-# Run the application
+build-editor:
+	@echo "Building editor..."
+	@go build -o editor.exe ./cmd/editor
+
+build-all: build build-landing build-editor
+
+# ── Run (local dev) ────────────────────────────────────────────────────────────
 run:
-	@go run cmd/api/main.go
+	@go run ./cmd/api
 
 run-landing:
-	@go run cmd/landing/main.go
+	@go run ./cmd/landing
 
-podman-build-api:
-	@podman build --target api-prod -t nawaran-api:latest .
+run-editor:
+	@go run ./cmd/editor
 
-podman-build-landing:
-	@podman build --target landing-prod -t nawaran-landing:latest .
-
-podman-build-all: podman-build-api podman-build-landing
-# Create DB container
-podman-run:
-	@podman compose up --build
-
-# Shutdown DB container
-podman-down:
-	@podman compose down
-
-# Test the application
-test:
-	@echo "Testing..."
-	@go test ./... -v
-# Integrations Tests for the application
-itest:
-	@echo "Running integration tests..."
-	@go test ./internal/database -v
-
-# Clean the binary
-clean:
-	@echo "Cleaning..."
-	@rm -f main
-
-# Live Reload
+# ── Watch (live reload with air) ───────────────────────────────────────────────
 watch:
 	@powershell -ExecutionPolicy Bypass -Command "if (Get-Command air -ErrorAction SilentlyContinue) { \
 		air; \
@@ -62,6 +40,47 @@ watch:
 	}"
 
 watch-landing:
-	@powershell -ExecutionPolicy Bypass -Command "$${env:STATIC_DIR='./static'}; go run cmd/landing/main.go"
+	@powershell -ExecutionPolicy Bypass -Command "$${env:STATIC_DIR}='./static'; go run ./cmd/landing"
 
-.PHONY: all build build-landing run run-landing test clean watch watch-landing podman-run podman-down podman-build-api podman-build-landing podman-build-all itest
+watch-editor:
+	@powershell -ExecutionPolicy Bypass -Command "$${env:STATIC_DIR}='./static'; go run ./cmd/editor"
+
+# ── Docker / Podman ────────────────────────────────────────────────────────────
+podman-build-api:
+	@podman build --target api-prod -t nawaran-api:latest .
+
+podman-build-landing:
+	@podman build --target landing-prod -t nawaran-landing:latest .
+
+podman-build-editor:
+	@podman build --target editor-prod -t nawaran-editor:latest .
+
+podman-build-all: podman-build-api podman-build-landing podman-build-editor
+
+podman-run:
+	@podman compose up --build
+
+podman-down:
+	@podman compose down
+
+# ── Test ───────────────────────────────────────────────────────────────────────
+test:
+	@echo "Testing..."
+	@go test ./... -v
+
+itest:
+	@echo "Running integration tests..."
+	@go test ./internal/database -v
+
+# ── Clean ──────────────────────────────────────────────────────────────────────
+clean:
+	@echo "Cleaning..."
+	@rm -f main.exe landing.exe editor.exe
+
+.PHONY: all \
+	build build-landing build-editor build-all \
+	run run-landing run-editor \
+	watch watch-landing watch-editor \
+	podman-build-api podman-build-landing podman-build-editor podman-build-all \
+	podman-run podman-down \
+	test itest clean

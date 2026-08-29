@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -50,7 +51,9 @@ func (v *Validator) Middleware(next http.Handler) http.Handler {
 		claims, err := v.Validate(r.Context(), r)
 		if err != nil {
 			log.Printf("Keycloak token rejected: %v", err)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"message": "unauthorized"})
 			return
 		}
 		ctx := context.WithValue(r.Context(), claimsKey{}, claims)
