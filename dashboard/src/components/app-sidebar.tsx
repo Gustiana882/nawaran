@@ -26,11 +26,13 @@ const data = {
       title: "Templates",
       url: "/templates",
       icon: <LayoutTemplateIcon />,
+      permission: "template.view",
     },
     {
       title: "Websites",
       url: "/websites",
       icon: <GlobeIcon />,
+      permission: "website.view",
     },
   ],
 }

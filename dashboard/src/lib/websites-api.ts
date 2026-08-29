@@ -1,5 +1,6 @@
 import type { WebsiteItem } from "@/types/cms"
 import { authorizedFetch } from "@/lib/api-client"
+import { appConfig } from "@/lib/config"
 
 type WebsiteApiItem = {
   uuid: string
@@ -50,7 +51,7 @@ export type WebsiteUpdateInput = {
   html: string
 }
 
-const API_BASE_URL = "https://api.nawaran.id/api"
+const API_BASE_URL = appConfig.apiBaseUrl
 
 function getDataValue(data: unknown, key: string): string {
   if (!data || typeof data !== "object" || Array.isArray(data)) return ""

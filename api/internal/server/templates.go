@@ -72,6 +72,12 @@ func (s *Server) handleListTemplates(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "template.view"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	templates, err := s.db.ListTemplates(ctx)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SaveResponse{OK: false, Message: "gagal mengambil daftar template"})
@@ -82,6 +88,12 @@ func (s *Server) handleListTemplates(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateTemplate(w http.ResponseWriter, r *http.Request) {
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "template.create"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	var payload templatePayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeJSON(w, http.StatusBadRequest, SaveResponse{OK: false, Message: "payload tidak valid: " + err.Error()})
@@ -115,6 +127,12 @@ func (s *Server) handleCreateTemplate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetTemplate(w http.ResponseWriter, r *http.Request, id string) {
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "template.view"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
@@ -128,6 +146,12 @@ func (s *Server) handleGetTemplate(w http.ResponseWriter, r *http.Request, id st
 }
 
 func (s *Server) handleUpdateTemplate(w http.ResponseWriter, r *http.Request, id string) {
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "template.update"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	var payload templatePayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeJSON(w, http.StatusBadRequest, SaveResponse{OK: false, Message: "payload tidak valid: " + err.Error()})
@@ -163,6 +187,12 @@ func (s *Server) handleUpdateTemplate(w http.ResponseWriter, r *http.Request, id
 func (s *Server) handleDeleteTemplate(w http.ResponseWriter, r *http.Request, id string) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
+
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "template.delete"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
 
 	if err := s.db.DeleteTemplate(ctx, id); err != nil {
 		writeJSON(w, http.StatusNotFound, SaveResponse{OK: false, Message: "template tidak ditemukan / gagal dihapus"})

@@ -1,9 +1,10 @@
 import Keycloak from "keycloak-js"
+import { appConfig } from "@/lib/config"
 
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8082",
-  realm: import.meta.env.VITE_KEYCLOAK_REALM || "nawaran",
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "dashboard",
+  url: appConfig.keycloakUrl,
+  realm: appConfig.keycloakRealm,
+  clientId: appConfig.keycloakClientId,
 })
 
 export default keycloak

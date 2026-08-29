@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { PageToast, useToast } from "@/components/page-toast"
+import { RoleGate } from "@/components/auth-provider"
 import type { WebsiteItem } from "@/types/cms"
 import {
   GlobeIcon,
@@ -62,13 +63,15 @@ export default function WebsitesPage({
           </div>
           <div>
             <h1 className="text-sm font-semibold leading-tight">Websites</h1>
-            <p className="text-xs text-muted-foreground">Kelola website yang dibuat dari template.</p>
+            <p className="text-xs text-muted-foreground">Kelola website yang dibuat dari website.</p>
           </div>
         </div>
-        <Button nativeButton={false} render={<Link to="/websites/new" />}>
-          <PlusCircleIcon className="h-3.5 w-3.5" />
-          Buat Website
-        </Button>
+        <RoleGate roles={["website.create"]} fallback={null}>
+          <Button nativeButton={false} render={<Link to="/websites/new" />}>
+            <PlusCircleIcon className="h-3.5 w-3.5" />
+            Buat Website
+          </Button>
+        </RoleGate>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
@@ -113,10 +116,12 @@ export default function WebsitesPage({
               <p className="text-sm font-medium">Belum ada website</p>
               <p className="mt-0.5 text-xs text-muted-foreground">Buat website dari salah satu template yang tersedia.</p>
             </div>
-            <Button nativeButton={false} render={<Link to="/websites/new" />}>
-              <PlusCircleIcon className="h-3.5 w-3.5" />
-              Buat Website
-            </Button>
+            <RoleGate roles={["website.create"]} fallback={null}>
+              <Button nativeButton={false} render={<Link to="/websites/new" />}>
+                <PlusCircleIcon className="h-3.5 w-3.5" />
+                Buat Website
+              </Button>
+            </RoleGate>
           </div>
         )}
 
@@ -142,23 +147,27 @@ export default function WebsitesPage({
                         <DropdownMenuItem onClick={() => navigate(`/websites/${site.id}`)}>
                           <EyeIcon className="h-3.5 w-3.5" /> Detail
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/websites/${site.id}/edit`)}>
-                          <EditIcon className="h-3.5 w-3.5" /> Edit
-                        </DropdownMenuItem>
+                        <RoleGate roles={["website.update"]} fallback={null}>
+                          <DropdownMenuItem onClick={() => navigate(`/websites/${site.id}/edit`)}>
+                            <EditIcon className="h-3.5 w-3.5" /> Edit
+                          </DropdownMenuItem>
+                        </RoleGate>
                         {site.domain && (
                           <DropdownMenuItem onClick={() => window.open(`https://${site.domain}/editor?page_id=${site.id}`, "_blank")}>
                             <FilePenIcon className="h-3.5 w-3.5" /> Buka Editor
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          disabled={deletingId === site.id}
-                          onClick={() => void handleDelete(site)}
-                        >
-                          <TrashIcon className="h-3.5 w-3.5" />
-                          {deletingId === site.id ? "Menghapus..." : "Hapus"}
-                        </DropdownMenuItem>
+                        <RoleGate roles={["website.delete"]} fallback={null}>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            disabled={deletingId === site.id}
+                            onClick={() => void handleDelete(site)}
+                          >
+                            <TrashIcon className="h-3.5 w-3.5" />
+                            {deletingId === site.id ? "Menghapus..." : "Hapus"}
+                          </DropdownMenuItem>
+                        </RoleGate>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

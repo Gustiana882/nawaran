@@ -1,5 +1,6 @@
 import type { TemplateItem } from "@/types/cms"
 import { authorizedFetch } from "@/lib/api-client"
+import { appConfig } from "@/lib/config"
 
 type TemplateApiItem = {
   id: string
@@ -42,7 +43,7 @@ function toTemplateItem(item: TemplateApiItem): TemplateItem {
   }
 }
 
-const API_BASE_URL = "https://api.nawaran.id/api" // Replace with your actual API base URL
+const API_BASE_URL = appConfig.apiBaseUrl
 
 export async function listTemplates(): Promise<TemplateItem[]> {
   const res = await authorizedFetch(`${API_BASE_URL}/templates`)

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageToast, useToast } from "@/components/page-toast"
+import { RoleGate } from "@/components/auth-provider"
 import { useMonacoTheme } from "@/hooks/use-monaco-theme"
 import type { WebsiteItem } from "@/types/cms"
 import {
@@ -97,14 +98,18 @@ export default function WebsiteDetailPage({ websites, onDelete }: WebsiteDetailP
               Editor
             </Button>
           )}
-          <Button nativeButton={false} variant="outline" render={<Link to={`/websites/${website.id}/edit`} />}>
-            <EditIcon className="h-3.5 w-3.5" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <TrashIcon className="h-3.5 w-3.5" />}
-            {isDeleting ? "Menghapus..." : "Hapus"}
-          </Button>
+          <RoleGate roles={["template.update"]} fallback={null}>
+            <Button nativeButton={false} variant="outline" render={<Link to={`/websites/${website.id}/edit`} />}>
+              <EditIcon className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          </RoleGate>
+          <RoleGate roles={["template.delete"]} fallback={null}>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <TrashIcon className="h-3.5 w-3.5" />}
+              {isDeleting ? "Menghapus..." : "Hapus"}
+            </Button>
+          </RoleGate>
         </div>
       </div>
 

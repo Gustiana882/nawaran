@@ -76,6 +76,12 @@ func (s *Server) handleListWebsites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "website.view"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
@@ -90,6 +96,12 @@ func (s *Server) handleListWebsites(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateWebsite(w http.ResponseWriter, r *http.Request) {
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "website.create"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	var payload createWebsitePayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeJSON(w, http.StatusBadRequest, SaveResponse{OK: false, Message: "payload tidak valid: " + err.Error()})
@@ -191,6 +203,12 @@ func (s *Server) handleGetData(w http.ResponseWriter, r *http.Request) {
 
 // handleSave godoc: POST /api/websites/save
 func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "website.create"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		writeJSON(w, http.StatusMethodNotAllowed, SaveResponse{OK: false, Message: "method tidak didukung"})
 		return
@@ -233,6 +251,12 @@ func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteWebsite godoc: DELETE /api/websites/:id
 func (s *Server) handleDeleteWebsite(w http.ResponseWriter, r *http.Request) {
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "website.delete"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	if r.Method != http.MethodDelete {
 		writeJSON(w, http.StatusMethodNotAllowed, SaveResponse{OK: false, Message: "method tidak didukung"})
 		return
@@ -262,6 +286,12 @@ func (s *Server) handleDeleteWebsite(w http.ResponseWriter, r *http.Request) {
 
 // handleUpdateWebsite godoc: PUT /api/websites/:id
 func (s *Server) handleUpdateWebsite(w http.ResponseWriter, r *http.Request) {
+	// cek role user
+	if err := s.auth.CheckRole(r.Context(), "website.update"); err != nil {
+		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
+		return
+	}
+
 	if r.Method != http.MethodPut {
 		writeJSON(w, http.StatusMethodNotAllowed, SaveResponse{OK: false, Message: "method tidak didukung"})
 		return
