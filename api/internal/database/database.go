@@ -33,7 +33,7 @@ type Service interface {
 	GetWebsiteVersion(ctx context.Context, websiteID string) (time.Time, error)
 
 	// ListWebsites returns all websites without applying an owner filter.
-	ListWebsites(ctx context.Context) ([]Websites, error)
+	ListWebsites(ctx context.Context, userID *string) ([]Websites, error)
 
 	// CreateWebsite creates a website from an existing template.
 	CreateWebsite(ctx context.Context, input CreateWebsiteInput) (*Websites, error)
@@ -44,7 +44,7 @@ type Service interface {
 	// DeleteWebsite deletes a website by UUID.
 	DeleteWebsite(ctx context.Context, websiteUUID string) error
 
-	ListTemplates(ctx context.Context) ([]Template, error)
+	ListTemplates(ctx context.Context, userID *string) ([]Template, error)
 	GetTemplateByID(ctx context.Context, id string) (*Template, error)
 	CreateTemplate(ctx context.Context, input CreateTemplateInput) (*Template, error)
 	UpdateTemplate(ctx context.Context, id string, input UpdateTemplateInput) (*Template, error)

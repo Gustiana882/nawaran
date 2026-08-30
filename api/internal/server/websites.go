@@ -82,10 +82,20 @@ func (s *Server) handleListWebsites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var userID *string = nil
+	if isAdmin := s.auth.CheckRole(r.Context(), "website.superadmin"); isAdmin != nil {
+		if sub, err := s.auth.GetSub(r.Context()); err != nil {
+			writeJSON(w, http.StatusUnauthorized, SaveResponse{OK: false, Message: "user tidak terautentikasi"})
+			return
+		} else {
+			userID = &sub
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	websites, err := s.db.ListWebsites(ctx)
+	websites, err := s.db.ListWebsites(ctx, userID)
 	if err != nil {
 		log.Printf("list websites error: %v", err)
 		writeJSON(w, http.StatusInternalServerError, SaveResponse{OK: false, Message: "gagal mengambil daftar website"})
@@ -100,6 +110,15 @@ func (s *Server) handleCreateWebsite(w http.ResponseWriter, r *http.Request) {
 	if err := s.auth.CheckRole(r.Context(), "website.create"); err != nil {
 		writeJSON(w, http.StatusForbidden, SaveResponse{OK: false, Message: "akses ditolak"})
 		return
+	}
+
+	// get user_id from claims
+	var userID string
+	if sub, err := s.auth.GetSub(r.Context()); err != nil {
+		writeJSON(w, http.StatusUnauthorized, SaveResponse{OK: false, Message: "user tidak terautentikasi"})
+		return
+	} else {
+		userID = sub
 	}
 
 	var payload createWebsitePayload
@@ -129,6 +148,7 @@ func (s *Server) handleCreateWebsite(w http.ResponseWriter, r *http.Request) {
 		Description:  payload.Description,
 		Domain:       payload.Domain,
 		TemplateUUID: payload.TemplateUUID,
+		UserID:       userID,
 	})
 	if err != nil {
 		log.Printf("create website error template=%s: %v", payload.TemplateUUID, err)

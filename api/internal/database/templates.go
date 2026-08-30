@@ -68,12 +68,15 @@ func decodeJSONB(raw []byte) (any, error) {
 	return out, nil
 }
 
-func (s *service) ListTemplates(ctx context.Context) ([]Template, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func (s *service) ListTemplates(ctx context.Context, userID *string) ([]Template, error) {
+	query := `
 		SELECT uuid, name, description, data, html, created_at, updated_at
 		FROM templates
-		ORDER BY created_at DESC
-	`)
+	`
+	if userID != nil {
+		query += fmt.Sprintf(" WHERE user_id = '%s'", *userID)
+	}
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("list templates: %w", err)
 	}

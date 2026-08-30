@@ -15,14 +15,15 @@ import (
 )
 
 type Websites struct {
-	ID          int              `json:"id"`
-	UUID        string           `json:"uuid"`
-	Name        string           `json:"name"`
-	Description string           `json:"description"`
-	Domain      string           `json:"domain"`
-	Data        json.RawMessage  `json:"data"`
-	HTML        string           `json:"html"`
-	UpdatedAt   *time.Time       `json:"updated_at"`
+	ID          int             `json:"id"`
+	UUID        string          `json:"uuid"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Domain      string          `json:"domain"`
+	Data        json.RawMessage `json:"data"`
+	HTML        string          `json:"html"`
+	UpdatedAt   *time.Time      `json:"updated_at"`
+	UserID      string          `json:"user_id"`
 }
 
 // SavePayload harus persis sama dengan yang dikirim InlineEditor lewat
@@ -54,6 +55,7 @@ type CreateWebsiteInput struct {
 	Description  string
 	Domain       string
 	TemplateUUID string
+	UserID       string
 }
 
 var (
@@ -65,12 +67,17 @@ func (p SavePayload) id() string {
 	return p.WebsiteID
 }
 
-func (s *service) ListWebsites(ctx context.Context) ([]Websites, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func (s *service) ListWebsites(ctx context.Context, userID *string) ([]Websites, error) {
+	query := `
 		SELECT uuid, id, domain, name, description, data, html, updated_at
 		FROM websites
-		ORDER BY updated_at DESC
-	`)
+	`
+
+	if userID != nil {
+		query += fmt.Sprintf(" WHERE user_id = '%s'", *userID)
+	}
+
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("list websites: %w", err)
 	}

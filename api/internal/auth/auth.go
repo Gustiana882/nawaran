@@ -175,6 +175,19 @@ func (v *Validator) hasRole(claims jwt.MapClaims, role string) bool {
 	return false
 }
 
+// get sub
+func (v *Validator) GetSub(ctx context.Context) (string, error) {
+	claims := ClaimsFromContext(ctx)
+	if claims == nil {
+		return "", fmt.Errorf("claims not found in context")
+	}
+	subValue, ok := claims["sub"].(string)
+	if !ok {
+		return "", fmt.Errorf("sub claim not found")
+	}
+	return subValue, nil
+}
+
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

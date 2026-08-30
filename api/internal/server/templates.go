@@ -78,7 +78,17 @@ func (s *Server) handleListTemplates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templates, err := s.db.ListTemplates(ctx)
+	var userID *string = nil
+	if isAdmin := s.auth.CheckRole(r.Context(), "template.superadmin"); isAdmin != nil {
+		if sub, err := s.auth.GetSub(r.Context()); err != nil {
+			writeJSON(w, http.StatusUnauthorized, SaveResponse{OK: false, Message: "user tidak terautentikasi"})
+			return
+		} else {
+			userID = &sub
+		}
+	}
+
+	templates, err := s.db.ListTemplates(ctx, userID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SaveResponse{OK: false, Message: "gagal mengambil daftar template"})
 		return
