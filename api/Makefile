@@ -15,7 +15,11 @@ build-editor:
 	@echo "Building editor..."
 	@go build -o editor.exe ./cmd/editor
 
-build-all: build build-landing build-editor
+build-worker:
+	@echo "Building worker..."
+	@go build -o worker.exe ./cmd/worker
+
+build-all: build build-landing build-editor build-worker
 
 # ── Run (local dev) ────────────────────────────────────────────────────────────
 run:
@@ -62,6 +66,9 @@ podman-run:
 
 podman-down:
 	@podman compose down
+
+podman-api:
+	podman machine ssh "podman system service --time=0 tcp:0.0.0.0:9999"
 
 # ── Test ───────────────────────────────────────────────────────────────────────
 test:

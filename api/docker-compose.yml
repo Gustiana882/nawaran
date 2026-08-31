@@ -38,9 +38,35 @@ services:
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://localhost:8082/realms/nawaran}
       KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/nawaran/protocol/openid-connect/certs}
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-dashboard,landing-editor}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://admin:admin@rabbitmq:5672/}
+      QUEUE_NAME: ${QUEUE_NAME:-provision-website}
+
     depends_on:
       psql_bp:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - blueprint
+
+  # ── Background worker ─────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker-prod
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://admin:admin@rabbitmq:5672/}
+      PODMAN_API_URL: ${PODMAN_API_URL}
+      CADDY_API_URL: ${CADDY_API_URL:-http://caddy:2019}
+      CADDY_SERVER_NAME: ${CADDY_SERVER_NAME:-srv0}
+      QUEUE_NAME: ${QUEUE_NAME:-provision-website}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      caddy:
+        condition: service_started
     networks:
       - blueprint
 
@@ -152,6 +178,33 @@ services:
     depends_on:
       keycloak_db:
         condition: service_healthy
+
+    networks:
+      - blueprint
+
+  # ── RabbitMQ ──────────────────────────────────────────────────────────────────
+  rabbitmq:
+    image: docker.io/library/rabbitmq:4-management-alpine
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test:
+        - "CMD"
+        - "rabbitmq-diagnostics"
+        - "-q"
+        - "ping"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - blueprint
 
@@ -162,6 +215,7 @@ volumes:
   keycloak_db_data:
   caddy_data:
   caddy_config:
+  rabbitmq_data:
 
 networks:
   blueprint:

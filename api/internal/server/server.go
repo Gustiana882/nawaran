@@ -13,14 +13,18 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 
 	"api/internal/auth"
+	"api/internal/container"
 	"api/internal/database"
+	"api/internal/proxy"
 )
 
 type Server struct {
 	port int
 
-	db   database.Service
-	auth *auth.Validator
+	db        database.Service
+	auth      *auth.Validator
+	container *container.Service
+	proxy     *proxy.Service
 }
 
 func NewServer() *http.Server {
@@ -33,8 +37,10 @@ func NewServer() *http.Server {
 	NewServer := &Server{
 		port: port,
 
-		db:   database.New(),
-		auth: authValidator,
+		db:        database.New(),
+		auth:      authValidator,
+		container: container.New(os.Getenv("PODMAN_API_URL")),
+		proxy:     proxy.New(os.Getenv("CADDY_API_URL"), os.Getenv("CADDY_SERVER_NAME")),
 	}
 
 	// Declare Server config

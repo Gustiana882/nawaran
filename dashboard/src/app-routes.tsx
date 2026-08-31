@@ -3,14 +3,27 @@ import { Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from
 
 import { createTemplate, deleteTemplate, getTemplateByID, listTemplates, updateTemplate } from "@/lib/templates-api"
 import { createWebsite, deleteWebsite, listWebsites } from "@/lib/websites-api"
+import { createProxy, deleteProxy, listProxies, updateProxy, type ProxyItem, type ProxySaveInput } from "@/lib/proxies-api"
+import {
+  createContainer,
+  deleteContainer,
+  listContainers,
+  restartContainer,
+  startContainer,
+  stopContainer,
+  type ContainerCreateInput,
+  type ContainerItem,
+} from "@/lib/containers-api"
 import type { TemplateItem, WebsiteItem } from "@/types/cms"
 import TemplateCreatePage, { type TemplateSavePayload } from "./pages/template-create"
 import TemplateDetailPage from "./pages/template-detail"
 import TemplatesPage from "./pages/templates"
+import ProxiesPage from "./pages/proxies"
 import WebsiteCreatePage, { type WebsiteSavePayload } from "./pages/website-create"
 import WebsiteDetailPage from "./pages/website-detail"
 import WebsiteEditPage from "./pages/website-edit"
 import WebsitesPage from "./pages/websites"
+import ContainersPage from "./pages/containers"
 
 export default function AppRoutes() {
   const navigate = useNavigate()
@@ -20,6 +33,12 @@ export default function AppRoutes() {
   const [websites, setWebsites] = React.useState<WebsiteItem[]>([])
   const [websitesLoading, setWebsitesLoading] = React.useState(true)
   const [websitesError, setWebsitesError] = React.useState<string | null>(null)
+  const [proxies, setProxies] = React.useState<ProxyItem[]>([])
+  const [proxiesLoading, setProxiesLoading] = React.useState(true)
+  const [proxiesError, setProxiesError] = React.useState<string | null>(null)
+  const [containers, setContainers] = React.useState<ContainerItem[]>([])
+  const [containersLoading, setContainersLoading] = React.useState(true)
+  const [containersError, setContainersError] = React.useState<string | null>(null)
 
   const loadTemplates = React.useCallback(async () => {
     setTemplatesLoading(true)
@@ -45,10 +64,36 @@ export default function AppRoutes() {
     }
   }, [])
 
+  const loadProxies = React.useCallback(async () => {
+    setProxiesLoading(true)
+    setProxiesError(null)
+    try {
+      setProxies(await listProxies())
+    } catch (error) {
+      setProxiesError(error instanceof Error ? error.message : "Gagal mengambil proxy")
+    } finally {
+      setProxiesLoading(false)
+    }
+  }, [])
+
+  const loadContainers = React.useCallback(async () => {
+    setContainersLoading(true)
+    setContainersError(null)
+    try {
+      setContainers(await listContainers())
+    } catch (error) {
+      setContainersError(error instanceof Error ? error.message : "Gagal mengambil container")
+    } finally {
+      setContainersLoading(false)
+    }
+  }, [])
+
   React.useEffect(() => {
     void loadTemplates()
     void loadWebsites()
-  }, [loadTemplates, loadWebsites])
+    void loadProxies()
+    void loadContainers()
+  }, [loadTemplates, loadWebsites, loadProxies, loadContainers])
 
   // ── Template handlers ──────────────────────────────────────────────────────
 
@@ -108,6 +153,88 @@ export default function AppRoutes() {
       return { ok: true as const }
     } catch (error) {
       return { ok: false as const, message: error instanceof Error ? error.message : "Gagal menghapus website" }
+    }
+  }
+
+  // ── Proxy handlers ────────────────────────────────────────────────────────
+
+  async function onCreateProxy(payload: ProxySaveInput) {
+    try {
+      const created = await createProxy(payload)
+      setProxies((prev) => [created, ...prev])
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal membuat proxy" }
+    }
+  }
+
+  async function onUpdateProxy(id: string, payload: ProxySaveInput) {
+    try {
+      const updated = await updateProxy(id, payload)
+      setProxies((prev) => prev.map((item) => (item.id === id ? { ...item, ...updated } : item)))
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal memperbarui proxy" }
+    }
+  }
+
+  async function onDeleteProxy(id: string) {
+    try {
+      await deleteProxy(id)
+      setProxies((prev) => prev.filter((item) => item.id !== id))
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal menghapus proxy" }
+    }
+  }
+
+  async function onCreateContainer(payload: ContainerCreateInput) {
+    try {
+      const created = await createContainer(payload)
+      setContainers((prev) => [created, ...prev])
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal membuat container" }
+    }
+  }
+
+  async function onStartContainer(name: string) {
+    try {
+      await startContainer(name)
+      setContainers((prev) => prev.map((item) => (item.name === name ? { ...item, state: "running", status: "Up" } : item)))
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal menjalankan container" }
+    }
+  }
+
+  async function onStopContainer(name: string) {
+    try {
+      await stopContainer(name)
+      setContainers((prev) => prev.map((item) => (item.name === name ? { ...item, state: "exited", status: "Exited" } : item)))
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal menghentikan container" }
+    }
+  }
+
+  async function onRestartContainer(name: string) {
+    try {
+      await restartContainer(name)
+      setContainers((prev) => prev.map((item) => (item.name === name ? { ...item, status: "Restarting" } : item)))
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal merestart container" }
+    }
+  }
+
+  async function onDeleteContainer(name: string) {
+    try {
+      await deleteContainer(name)
+      setContainers((prev) => prev.filter((item) => item.name !== name))
+      return { ok: true as const }
+    } catch (error) {
+      return { ok: false as const, message: error instanceof Error ? error.message : "Gagal menghapus container" }
     }
   }
 
@@ -217,6 +344,40 @@ export default function AppRoutes() {
       <Route
         path="/websites/:id"
         element={<WebsiteDetailPage websites={websites} onDelete={onDeleteWebsite} />}
+      />
+
+      {/* Proxy */}
+      <Route
+        path="/proxies"
+        element={
+          <ProxiesPage
+            proxies={proxies}
+            isLoading={proxiesLoading}
+            errorMessage={proxiesError}
+            onRetry={loadProxies}
+            onCreate={onCreateProxy}
+            onUpdate={onUpdateProxy}
+            onDelete={onDeleteProxy}
+          />
+        }
+      />
+
+      {/* Containers */}
+      <Route
+        path="/containers"
+        element={
+          <ContainersPage
+            containers={containers}
+            isLoading={containersLoading}
+            errorMessage={containersError}
+            onRetry={loadContainers}
+            onCreate={onCreateContainer}
+            onStart={onStartContainer}
+            onStop={onStopContainer}
+            onRestart={onRestartContainer}
+            onDelete={onDeleteContainer}
+          />
+        }
       />
 
       <Route path="*" element={<Navigate to="/templates" replace />} />

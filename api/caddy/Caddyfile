@@ -1,10 +1,7 @@
 {
-    admin 0.0.0.0:2019
-}
-
-https://app.nawaran.id {
-    tls internal
-    reverse_proxy landing:8080
+    admin 0.0.0.0:2019 {
+        origins *
+    }
 }
 
 https://editor.nawaran.id {

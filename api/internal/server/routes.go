@@ -33,6 +33,12 @@ func (s *Server) RegisterRoutes() http.Handler {
 	mux.Handle("/api/templates", s.protected(http.HandlerFunc(s.handleTemplates)))
 	mux.Handle("/api/templates/", s.protected(http.HandlerFunc(s.handleTemplateByID)))
 
+	mux.Handle("/api/containers", s.protected(http.HandlerFunc(s.handleContainer)))
+	mux.Handle("/api/containers/{name}", s.protected(http.HandlerFunc(s.handleContainerByName)))
+
+	mux.Handle("/api/proxies", s.protected(http.HandlerFunc(s.handleProxy)))
+	mux.Handle("/api/proxies/{id}", s.protected(http.HandlerFunc(s.handleProxyByID)))
+
 	// Wrap the mux with CORS middleware
 	return s.corsMiddleware(mux)
 }

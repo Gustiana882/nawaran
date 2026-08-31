@@ -11,6 +11,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/api     ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/landing  ./cmd/landing
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/editor   ./cmd/editor
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/worker   ./cmd/worker
 
 
 # ── API production image ───────────────────────────────────────────────────────
@@ -31,7 +32,6 @@ FROM gcr.io/distroless/static-debian13:nonroot AS landing-prod
 WORKDIR /app
 
 COPY --from=build /app/landing /app/landing
-COPY --from=build /app/static  /app/static
 
 # EXPOSE 80
 
@@ -49,3 +49,14 @@ COPY --from=build /app/static /app/static
 # EXPOSE 80
 
 ENTRYPOINT ["/app/editor"]
+
+# ── Worker production image ────────────────────────────────────────────────────
+FROM gcr.io/distroless/static-debian13:nonroot AS worker-prod
+
+WORKDIR /app
+
+COPY --from=build /app/worker /app/worker
+
+# EXPOSE 80
+
+ENTRYPOINT ["/app/worker"]
