@@ -8,16 +8,20 @@ import (
 	"syscall"
 
 	"api/internal/container"
+	"api/internal/database"
 	"api/internal/proxy"
 	"api/internal/queue"
 )
 
 func main() {
+	rabbitmqURL := os.Getenv("RABBITMQ_URL")
+	databaseService := database.New()
 	podman := container.New(os.Getenv("PODMAN_API_URL"))
 	caddy := proxy.New(os.Getenv("CADDY_API_URL"), os.Getenv("CADDY_SERVER_NAME"))
 
 	consumer, err := queue.NewConsumer(
-		os.Getenv("RABBITMQ_URL"),
+		rabbitmqURL,
+		databaseService,
 		podman,
 		caddy,
 	)

@@ -47,7 +47,7 @@ export default function WebsitesPage({
     if (!result.ok) {
       showToast("error", result.message || "Gagal menghapus website")
     } else {
-      showToast("success", `Website "${website.name}" berhasil dihapus`)
+      showToast("success", `Hapus website "${website.name}" sedang diproses`)
     }
   }
 
@@ -134,8 +134,15 @@ export default function WebsitesPage({
                 className="group flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex-1 p-4">
-                  <div className="mb-1 flex items-start justify-between gap-2">
+                  <div className="mb-2 flex items-start justify-between gap-2">
                     <h2 className="line-clamp-1 text-sm font-semibold">{site.name}</h2>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      site.status === "creating" ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300" :
+                      site.status === "deleting" ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300" :
+                      "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                    }`}>
+                      {site.status === "creating" ? "Creating" : site.status === "deleting" ? "Deleting" : "Active"}
+                    </span>
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         className="-mr-1 -mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 focus:outline-none"
@@ -189,6 +196,9 @@ export default function WebsitesPage({
                   <p className="line-clamp-2 text-xs text-muted-foreground">
                     {site.description || "Tanpa deskripsi"}
                   </p>
+                  <div className="mt-3 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {site.status === "creating" ? "Website sedang dibuat" : site.status === "deleting" ? "Website sedang dihapus" : "Website siap dipakai"}
+                  </div>
                 </div>
 
                 <div className="flex gap-2 border-t px-4 py-3">

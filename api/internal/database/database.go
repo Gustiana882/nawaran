@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -28,21 +29,16 @@ type Service interface {
 
 	// GetWebsiteData returns the raw JSONB data column and html template for a website.
 	GetWebsiteData(ctx context.Context, websiteID string) ([]byte, error)
-
-	// GetWebsiteVersion returns the latest updated_at timestamp for a website.
 	GetWebsiteVersion(ctx context.Context, websiteID string) (time.Time, error)
-
-	// ListWebsites returns all websites without applying an owner filter.
+	GetWebsiteByID(ctx context.Context, websiteID string) (*Websites, error)
+	GetWebsiteStatus(ctx context.Context, websiteID string) (string, error)
+	SetWebsiteStatus(ctx context.Context, websiteID string, status string) error
+	MarkWebsiteDeleting(ctx context.Context, websiteID string) error
 	ListWebsites(ctx context.Context, userID *string) ([]Websites, error)
-
-	// CreateWebsite creates a website from an existing template.
 	CreateWebsite(ctx context.Context, input CreateWebsiteInput) (*Websites, error)
-
-	// UpdateWebsite updates an existing website.
 	UpdateWebsite(ctx context.Context, input UpdateWebsiteInput) (*Websites, error)
-
-	// DeleteWebsite deletes a website by UUID.
 	DeleteWebsite(ctx context.Context, websiteUUID string) error
+	SetProxyID(ctx context.Context, websiteID string, proxyID uuid.UUID) error
 
 	ListTemplates(ctx context.Context, userID *string) ([]Template, error)
 	GetTemplateByID(ctx context.Context, id string) (*Template, error)

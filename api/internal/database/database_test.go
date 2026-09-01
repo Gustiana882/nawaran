@@ -98,3 +98,51 @@ func TestClose(t *testing.T) {
 		t.Fatalf("expected Close() to return nil")
 	}
 }
+
+func TestWebsiteLifecycleStatus(t *testing.T) {
+	ctx := context.Background()
+	srv := New()
+
+	template, err := srv.CreateTemplate(ctx, CreateTemplateInput{
+		Name:        "Template Test",
+		Description: "desc",
+		Data: map[string]any{
+			"title": "Hello",
+		},
+		HTML: "<html><body>Hello</body></html>",
+	})
+	if err != nil {
+		t.Fatalf("create template: %v", err)
+	}
+
+	website, err := srv.CreateWebsite(ctx, CreateWebsiteInput{
+		Name:         "Website Lifecycle",
+		Description:  "desc",
+		Domain:       "lifecycle.example.com",
+		TemplateUUID: template.ID,
+		UserID:       "user-123",
+	})
+	if err != nil {
+		t.Fatalf("create website: %v", err)
+	}
+
+	status, err := srv.GetWebsiteStatus(ctx, website.UUID)
+	if err != nil {
+		t.Fatalf("get website status: %v", err)
+	}
+	if status != "creating" {
+		t.Fatalf("expected creating status, got %q", status)
+	}
+
+	if err := srv.SetWebsiteStatus(ctx, website.UUID, "active"); err != nil {
+		t.Fatalf("set website status: %v", err)
+	}
+
+	status, err = srv.GetWebsiteStatus(ctx, website.UUID)
+	if err != nil {
+		t.Fatalf("get updated status: %v", err)
+	}
+	if status != "active" {
+		t.Fatalf("expected active status, got %q", status)
+	}
+}

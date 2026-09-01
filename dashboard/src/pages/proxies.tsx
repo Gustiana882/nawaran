@@ -119,17 +119,12 @@ export default function ProxiesPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <RoleGate roles={["proxy.create"]} fallback={null}>
-            <Button variant="outline" nativeButton={false} onClick={() => setEditingId(null)}>
-              <PlusCircleIcon className="h-3.5 w-3.5" />
-              Baru
-            </Button>
-          </RoleGate>
+          
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="mx-auto max-w-4xl space-y-4">
+        <div className="mx-auto space-y-4">
           {!isLoading && errorMessage && (
             <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               <span>{errorMessage}</span>

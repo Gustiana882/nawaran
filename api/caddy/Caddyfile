@@ -3,13 +3,3 @@
         origins *
     }
 }
-
-https://editor.nawaran.id {
-    tls internal
-    reverse_proxy editor:8080
-}
-
-https://api.nawaran.id {
-    tls internal
-    reverse_proxy api:8080
-}

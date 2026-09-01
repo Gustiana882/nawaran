@@ -2,27 +2,29 @@ package queue
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strings"
-	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"api/internal/container"
+	"api/internal/database"
 	"api/internal/proxy"
 )
 
 type Consumer struct {
 	conn   *amqp.Connection
 	ch     *amqp.Channel
+	db     database.Service
 	podman *container.Service
 	caddy  *proxy.Service
 }
 
-func NewConsumer(amqpURL string, podman *container.Service, caddy *proxy.Service) (*Consumer, error) {
+func NewConsumer(amqpURL string, db database.Service, podman *container.Service, caddy *proxy.Service) (*Consumer, error) {
 	conn, err := amqp.Dial(amqpURL)
 	if err != nil {
 		return nil, fmt.Errorf("connect rabbitmq: %w", err)
@@ -34,26 +36,54 @@ func NewConsumer(amqpURL string, podman *container.Service, caddy *proxy.Service
 		return nil, fmt.Errorf("open rabbitmq channel: %w", err)
 	}
 
+	queueName := os.Getenv("QUEUE_NAME")
+	if queueName == "" {
+		queueName = "provision-website"
+	}
+	deadLetterExchange := queueName + "-dlx"
+	deadLetterQueue := queueName + "-dlq"
+
+	if err := ch.ExchangeDeclare(deadLetterExchange, amqp.ExchangeDirect, true, false, false, false, nil); err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("declare dlx exchange: %w", err)
+	}
+
+	if _, err := ch.QueueDeclare(deadLetterQueue, true, false, false, false, nil); err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("declare dlq: %w", err)
+	}
+
+	if err := ch.QueueBind(deadLetterQueue, queueName, deadLetterExchange, false, nil); err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("bind dlq: %w", err)
+	}
+
 	_, err = ch.QueueDeclare(
-		os.Getenv("QUEUE_NAME"),
+		queueName,
 		true,
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{
+			"x-dead-letter-exchange":    deadLetterExchange,
+			"x-dead-letter-routing-key": queueName,
+		},
 	)
 	if err != nil {
-		ch.Close()
-		conn.Close()
-		return nil, fmt.Errorf("declare queue: %w", err)
+		var amqpErr *amqp.Error
+		if errors.As(err, &amqpErr) && amqpErr.Code == 406 {
+			log.Printf("queue %s already exists with incompatible arguments; keeping current definition to avoid RabbitMQ 406 redeclare mismatch", queueName)
+		} else {
+			ch.Close()
+			conn.Close()
+			return nil, fmt.Errorf("declare queue: %w", err)
+		}
 	}
 
-	// Jangan auto-ACK.
-	if err := ch.Qos(
-		1, // satu job per consumer
-		0,
-		false,
-	); err != nil {
+	if err := ch.Qos(1, 0, false); err != nil {
 		ch.Close()
 		conn.Close()
 		return nil, fmt.Errorf("set qos: %w", err)
@@ -62,6 +92,7 @@ func NewConsumer(amqpURL string, podman *container.Service, caddy *proxy.Service
 	return &Consumer{
 		conn:   conn,
 		ch:     ch,
+		db:     db,
 		podman: podman,
 		caddy:  caddy,
 	}, nil
@@ -96,11 +127,25 @@ func (c *Consumer) Start(ctx context.Context) error {
 			if err := c.handleMessage(ctx, msg); err != nil {
 				log.Printf("provision website failed: %v", err)
 
-				// Message dikembalikan ke queue.
+				if shouldDropMessage(err) {
+					log.Printf("permanent failure: dropping message without requeue")
+					if err := msg.Nack(false, false); err != nil {
+						log.Printf("nack failed: %v", err)
+					}
+					continue
+				}
+
+				if errors.Is(err, database.ErrWebsiteNotFound) {
+					log.Printf("website no longer exists, skipping stale queued job")
+					if err := msg.Ack(false); err != nil {
+						log.Printf("ack failed: %v", err)
+					}
+					continue
+				}
+
 				if err := msg.Nack(false, true); err != nil {
 					log.Printf("nack failed: %v", err)
 				}
-
 				continue
 			}
 
@@ -111,59 +156,21 @@ func (c *Consumer) Start(ctx context.Context) error {
 	}
 }
 
-func (c *Consumer) handleMessage(parentCtx context.Context, msg amqp.Delivery) error {
-	var job ProvisionWebsiteJob
-
-	if err := json.Unmarshal(msg.Body, &job); err != nil {
-		// Message invalid. Jangan retry selamanya.
-		log.Printf("invalid provision message: %v", err)
-		return msg.Reject(false)
+func shouldDropMessage(err error) bool {
+	if err == nil {
+		return false
 	}
-
-	log.Printf("provisioning website=%s domain=%s", job.WebsiteID, job.Domain)
-
-	// Satu job maksimal 60 detik.
-	ctx, cancel := context.WithTimeout(parentCtx, 60*time.Second)
-	defer cancel()
-
-	containerName := strings.ReplaceAll(job.Domain, ".", "-")
-
-	// =========================
-	// 1. CREATE CONTAINER
-	// =========================
-
-	result, err := c.podman.Create(ctx, container.CreateRequest{
-		Name:  containerName,
-		Image: job.Image,
-	})
-	if err != nil {
-		return fmt.Errorf("create container: %w", err)
+	if errors.Is(err, database.ErrWebsiteNotFound) || errors.Is(err, database.ErrWebsiteDomainMismatch) {
+		return true
 	}
-
-	log.Printf("container created id=%s", result.ID)
-
-	// =========================
-	// 2. START CONTAINER
-	// =========================
-
-	if err := c.podman.Start(ctx, containerName); err != nil {
-		return fmt.Errorf("start container: %w", err)
+	if strings.Contains(err.Error(), "invalid provision message") || strings.Contains(err.Error(), "decode provision job") || strings.Contains(err.Error(), "marshal provision job") {
+		return true
 	}
-
-	log.Printf("container started name=%s", containerName)
-
-	// =========================
-	// 3. CREATE CADDY PROXY
-	// =========================
-
-	uuid, err := c.caddy.CreateProxy(ctx, job.Domain, containerName+":8080")
-	if err != nil {
-		return fmt.Errorf("create caddy proxy: %w", err)
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return false
 	}
-
-	log.Printf("caddy proxy created domain=%s uuid=%s", job.Domain, uuid)
-
-	return nil
+	return false
 }
 
 func (c *Consumer) Close() error {

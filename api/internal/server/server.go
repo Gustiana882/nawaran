@@ -16,6 +16,7 @@ import (
 	"api/internal/container"
 	"api/internal/database"
 	"api/internal/proxy"
+	"api/internal/queue"
 )
 
 type Server struct {
@@ -25,6 +26,7 @@ type Server struct {
 	auth      *auth.Validator
 	container *container.Service
 	proxy     *proxy.Service
+	producer  *queue.Producer
 }
 
 func NewServer() *http.Server {
@@ -34,13 +36,18 @@ func NewServer() *http.Server {
 		log.Printf("Keycloak auth disabled: %v", err)
 	}
 
-	NewServer := &Server{
-		port: port,
+	producer, err := queue.NewProducer(os.Getenv("RABBITMQ_URL"))
+	if err != nil {
+		log.Fatalf("failed to create queue producer: %v", err)
+	}
 
+	NewServer := &Server{
+		port:      port,
 		db:        database.New(),
 		auth:      authValidator,
 		container: container.New(os.Getenv("PODMAN_API_URL")),
 		proxy:     proxy.New(os.Getenv("CADDY_API_URL"), os.Getenv("CADDY_SERVER_NAME")),
+		producer:  producer,
 	}
 
 	// Declare Server config

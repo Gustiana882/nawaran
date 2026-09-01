@@ -8,18 +8,21 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
 
 type Service struct {
 	BaseURL    string
+	Network    string
 	HTTPClient *http.Client
 }
 
 func New(baseURL string) *Service {
 	return &Service{
 		BaseURL: strings.TrimRight(baseURL, "/"),
+		Network: strings.TrimSpace(os.Getenv("PODMAN_NETWORK")),
 		HTTPClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -38,6 +41,7 @@ type CreateRequest struct {
 	Env           map[string]string `json:"env,omitempty"`
 	WorkingDir    string            `json:"work_dir,omitempty"`
 	RestartPolicy string            `json:"restart_policy,omitempty"`
+	Networks      map[string]any    `json:"networks,omitempty"`
 
 	PortMappings []PortMapping `json:"portmappings,omitempty"`
 }
@@ -59,6 +63,10 @@ type CreateResponse struct {
 // =========================
 
 func (s *Service) Create(ctx context.Context, input CreateRequest) (*CreateResponse, error) {
+	if len(input.Networks) == 0 && s.Network != "" {
+		input.Networks = map[string]any{s.Network: map[string]any{}}
+	}
+
 	body, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("marshal create container: %w", err)
@@ -206,6 +214,10 @@ func (s *Service) doRequest(ctx context.Context, method string, path string, bod
 	}
 
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotModified {
+		return resp.StatusCode, nil
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		responseBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))

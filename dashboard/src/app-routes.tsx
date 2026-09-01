@@ -134,7 +134,7 @@ export default function AppRoutes() {
   async function onSaveWebsite(payload: WebsiteSavePayload) {
     try {
       const created = await createWebsite(payload)
-      setWebsites((prev) => [created, ...prev])
+      setWebsites((prev) => [{ ...created, status: "creating" }, ...prev])
       navigate("/websites")
       return { ok: true as const }
     } catch (error) {
@@ -149,7 +149,7 @@ export default function AppRoutes() {
   async function onDeleteWebsite(id: string) {
     try {
       await deleteWebsite(id)
-      setWebsites((prev) => prev.filter((item) => item.id !== id))
+      setWebsites((prev) => prev.map((item) => item.id === id ? { ...item, status: "deleting" } : item))
       return { ok: true as const }
     } catch (error) {
       return { ok: false as const, message: error instanceof Error ? error.message : "Gagal menghapus website" }

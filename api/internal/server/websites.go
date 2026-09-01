@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"api/internal/database"
+	"api/internal/queue"
 )
 
 type SaveResponse struct {
@@ -150,6 +151,7 @@ func (s *Server) handleCreateWebsite(w http.ResponseWriter, r *http.Request) {
 		TemplateUUID: payload.TemplateUUID,
 		UserID:       userID,
 	})
+
 	if err != nil {
 		log.Printf("create website error template=%s: %v", payload.TemplateUUID, err)
 		if strings.Contains(err.Error(), "template ") && strings.Contains(err.Error(), "tidak ditemukan") {
@@ -158,6 +160,16 @@ func (s *Server) handleCreateWebsite(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusInternalServerError, SaveResponse{OK: false, Message: "gagal membuat website"})
 		return
+	}
+
+	// Publish a message to the queue for further processing (e.g., provisioning the website)
+	if err := s.producer.PublishProvision(ctx, queue.ProvisionWebsiteJob{
+		Action:    "provision",
+		WebsiteID: website.UUID,
+		Domain:    website.Domain,
+		Image:     "docker.io/library/api-landing",
+	}); err != nil {
+		log.Printf("failed to publish provision message for website=%s: %v", website.UUID, err)
 	}
 
 	writeJSON(w, http.StatusCreated, websiteSingleResponse{OK: true, Website: *website})
@@ -291,8 +303,9 @@ func (s *Server) handleDeleteWebsite(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	if err := s.db.DeleteWebsite(ctx, websiteID); err != nil {
-		log.Printf("delete website error id=%s: %v", websiteID, err)
+	website, err := s.db.GetWebsiteByID(ctx, websiteID)
+	if err != nil {
+		log.Printf("delete website lookup error id=%s: %v", websiteID, err)
 		if errors.Is(err, database.ErrWebsiteNotFound) {
 			writeJSON(w, http.StatusNotFound, deleteWebsiteResponse{OK: false, Message: "website tidak ditemukan"})
 			return
@@ -301,7 +314,24 @@ func (s *Server) handleDeleteWebsite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, deleteWebsiteResponse{OK: true})
+	if err := s.db.MarkWebsiteDeleting(ctx, websiteID); err != nil {
+		log.Printf("mark deleting website error id=%s: %v", websiteID, err)
+		writeJSON(w, http.StatusInternalServerError, deleteWebsiteResponse{OK: false, Message: "gagal menghapus website"})
+		return
+	}
+
+	if err := s.producer.PublishDelete(ctx, queue.DeleteWebsiteJob{
+		Action:    "delete",
+		WebsiteID: websiteID,
+		Domain:    website.Domain,
+		ProxyID:   website.ProxyUUID,
+	}); err != nil {
+		log.Printf("failed to publish delete message for website=%s: %v", websiteID, err)
+		writeJSON(w, http.StatusInternalServerError, deleteWebsiteResponse{OK: false, Message: "gagal menghapus website"})
+		return
+	}
+
+	writeJSON(w, http.StatusAccepted, deleteWebsiteResponse{OK: true, Message: "proses penghapusan website sedang berjalan"})
 }
 
 // handleUpdateWebsite godoc: PUT /api/websites/:id

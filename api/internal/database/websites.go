@@ -23,6 +23,8 @@ type Websites struct {
 	Data        json.RawMessage `json:"data"`
 	HTML        string          `json:"html"`
 	UpdatedAt   *time.Time      `json:"updated_at"`
+	Status      string          `json:"status"`
+	ProxyUUID   *string         `json:"proxy_uuid,omitempty"`
 	UserID      string          `json:"user_id"`
 }
 
@@ -69,7 +71,7 @@ func (p SavePayload) id() string {
 
 func (s *service) ListWebsites(ctx context.Context, userID *string) ([]Websites, error) {
 	query := `
-		SELECT uuid, id, domain, name, description, data, html, updated_at
+		SELECT uuid, id, domain, name, description, data, html, updated_at, status, proxy_uuid
 		FROM websites
 	`
 
@@ -86,10 +88,11 @@ func (s *service) ListWebsites(ctx context.Context, userID *string) ([]Websites,
 	websites := make([]Websites, 0)
 	for rows.Next() {
 		var website Websites
-		var name, description, domain, htmlVal sql.NullString
+		var name, description, domain, htmlVal, status sql.NullString
+		var proxyUUID sql.NullString
 		if err := rows.Scan(
 			&website.UUID, &website.ID, &domain, &name, &description,
-			&website.Data, &htmlVal, &website.UpdatedAt,
+			&website.Data, &htmlVal, &website.UpdatedAt, &status, &proxyUUID,
 		); err != nil {
 			return nil, fmt.Errorf("scan website: %w", err)
 		}
@@ -97,6 +100,11 @@ func (s *service) ListWebsites(ctx context.Context, userID *string) ([]Websites,
 		website.Description = description.String
 		website.Domain = domain.String
 		website.HTML = htmlVal.String
+		website.Status = status.String
+		if proxyUUID.Valid {
+			v := proxyUUID.String
+			website.ProxyUUID = &v
+		}
 		websites = append(websites, website)
 	}
 	if err := rows.Err(); err != nil {
@@ -118,15 +126,14 @@ func (s *service) CreateWebsite(ctx context.Context, input CreateWebsiteInput) (
 		return nil, fmt.Errorf("get template for website: %w", err)
 	}
 
-	// Buat website baru dengan UUID baru, domain, nama, deskripsi, data JSONB, dan HTML dari template.
 	websiteUUID := uuid.NewString()
 	var website Websites
 	if err := s.db.QueryRowContext(ctx, `
-		INSERT INTO websites (uuid, domain, name, description, data, html, updated_at)
-		VALUES ($1, $2, $3, $4, $5::jsonb, $6, now())
-		RETURNING id, uuid, domain, name, description, data, html, updated_at
-	`, websiteUUID, input.Domain, input.Name, input.Description, rawData, html).Scan(
-		&website.ID, &website.UUID, &website.Domain, &website.Name, &website.Description, &website.Data, &website.HTML, &website.UpdatedAt,
+		INSERT INTO websites (uuid, domain, name, description, data, html, user_id, status, updated_at)
+		VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, 'creating', now())
+		RETURNING id, uuid, domain, name, description, data, html, updated_at, status, proxy_uuid
+	`, websiteUUID, input.Domain, input.Name, input.Description, rawData, html, input.UserID).Scan(
+		&website.ID, &website.UUID, &website.Domain, &website.Name, &website.Description, &website.Data, &website.HTML, &website.UpdatedAt, &website.Status, &website.ProxyUUID,
 	); err != nil {
 		return nil, fmt.Errorf("create website: %w", err)
 	}
@@ -182,6 +189,75 @@ func (s *service) GetWebsiteVersion(ctx context.Context, websiteID string) (time
 	}
 
 	return updatedAt, nil
+}
+
+func (s *service) GetWebsiteByID(ctx context.Context, websiteID string) (*Websites, error) {
+	var website Websites
+	var status sql.NullString
+	var proxyUUID sql.NullString
+	var domain, name, description, html sql.NullString
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT id, uuid, domain, name, description, data, html, updated_at, status, proxy_uuid, user_id
+		FROM websites WHERE uuid = $1
+	`, websiteID).Scan(
+		&website.ID, &website.UUID, &domain, &name, &description, &website.Data, &html, &website.UpdatedAt, &status, &proxyUUID, &website.UserID,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteID)
+		}
+		return nil, fmt.Errorf("get website by id: %w", err)
+	}
+	website.Name = name.String
+	website.Description = description.String
+	website.Domain = domain.String
+	website.HTML = html.String
+	website.Status = status.String
+	if proxyUUID.Valid {
+		v := proxyUUID.String
+		website.ProxyUUID = &v
+	}
+	return &website, nil
+}
+
+func (s *service) GetWebsiteStatus(ctx context.Context, websiteID string) (string, error) {
+	var status string
+	if err := s.db.QueryRowContext(ctx, `SELECT status FROM websites WHERE uuid = $1`, websiteID).Scan(&status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteID)
+		}
+		return "", fmt.Errorf("get website status: %w", err)
+	}
+	return status, nil
+}
+
+func (s *service) SetWebsiteStatus(ctx context.Context, websiteID string, status string) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE websites SET status = $1, updated_at = now() WHERE uuid = $2`, status, websiteID)
+	if err != nil {
+		return fmt.Errorf("set website status: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteID)
+	}
+	return nil
+}
+
+func (s *service) MarkWebsiteDeleting(ctx context.Context, websiteID string) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE websites SET status = 'deleting', updated_at = now() WHERE uuid = $1`, websiteID)
+	if err != nil {
+		return fmt.Errorf("mark website deleting: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteID)
+	}
+	return nil
 }
 
 // ApplySave menggabungkan payload ke kolom JSONB `websites.data`, dijalankan
@@ -454,4 +530,26 @@ func (s *service) UpdateWebsite(ctx context.Context, input UpdateWebsiteInput) (
 	}
 
 	return &website, nil
+}
+
+func (s *service) SetProxyID(ctx context.Context, websiteID string, proxyID uuid.UUID) error {
+	result, err := s.db.ExecContext(ctx, `
+		UPDATE websites 
+		SET proxy_uuid = $1
+		WHERE uuid = $2
+	`, proxyID, websiteID)
+	if err != nil {
+		return fmt.Errorf("set proxy ID: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("%w: %s", ErrWebsiteNotFound, websiteID)
+	}
+
+	return nil
 }

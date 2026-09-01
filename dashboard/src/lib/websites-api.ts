@@ -11,6 +11,7 @@ type WebsiteApiItem = {
   data: unknown
   html: string
   updated_at: string
+  status?: string
 }
 
 type ListWebsitesResponse = {
@@ -68,6 +69,7 @@ function toWebsiteItem(item: WebsiteApiItem): WebsiteItem {
     data: item.data,
     html: item.html,
     createdAt: item.updated_at,
+    status: item.status || "active",
   }
 }
 

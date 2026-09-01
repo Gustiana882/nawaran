@@ -17,4 +17,5 @@ export interface WebsiteItem {
   html: string
   templateId?: string
   createdAt: string
+  status?: string
 }
