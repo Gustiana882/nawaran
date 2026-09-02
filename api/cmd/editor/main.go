@@ -2,6 +2,8 @@ package main
 
 import (
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"path/filepath"
 
 	"api/internal/renderer"
@@ -14,8 +16,22 @@ func main() {
 	staticDir := renderer.ResolveStaticDir()
 	cacheDir := renderer.ResolveCacheDir()
 
+	// Backend API URL
+	target, err := url.Parse(apiURL)
+	if err != nil {
+		panic(err)
+	}
+
+	// Reverse proxy ke backend
+	apiProxy := httputil.NewSingleHostReverseProxy(target)
+
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
+
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+		apiProxy.ServeHTTP(w, r)
+	})
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("website_id")
 
