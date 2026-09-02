@@ -22,6 +22,11 @@
  *   pernah dipakai).
  * - onSave bisa dikustomisasi (default: console.log), siap dipasang ke API.
  * - API publik window.InlineEditor untuk integrasi lanjutan.
+ * - Klik pertama pada field mengaktifkan mode edit. Klik berikutnya
+ *   selagi field masih aktif TIDAK mereset ulang mode edit — browser
+ *   dibiarkan menangani penempatan cursor secara native, sesuai posisi
+ *   klik (sebelumnya ini BUG: klik kedua selalu memaksa cursor balik
+ *   ke akhir teks).
  *
  * ========================================================
  */
@@ -796,8 +801,14 @@
    */
 
   function init() {
+    // Klik-pertama (pointerdown) pada field yang BELUM aktif diedit perlu
+    // di-preventDefault supaya tidak memicu perilaku native browser
+    // (mis. drag-select) sebelum contentEditable diaktifkan. Tapi kalau
+    // field itu SUDAH aktif diedit, biarkan native pointerdown jalan biar
+    // browser bisa menempatkan cursor sesuai posisi klik.
     document.addEventListener("pointerdown", (event) => {
-      if (event.target.closest(config.textSelector)) {
+      const textField = event.target.closest(config.textSelector);
+      if (textField && !textField.isContentEditable) {
         event.preventDefault();
         event.stopPropagation();
       }
@@ -806,6 +817,15 @@
     document.addEventListener("click", (event) => {
       const textField = event.target.closest(config.textSelector);
       if (textField) {
+        if (textField.isContentEditable) {
+          // Field ini sudah dalam mode edit (ini klik ke-2, ke-3, dst).
+          // Jangan panggil startEditor lagi — itu akan mereset cursor
+          // ke akhir teks setiap kali. Biarkan browser menangani klik
+          // secara native supaya cursor pindah ke posisi yang diklik.
+          return;
+        }
+
+        // Klik pertama: aktifkan mode edit.
         event.preventDefault();
         event.stopPropagation();
         startEditor(textField);
