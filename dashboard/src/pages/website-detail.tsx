@@ -129,7 +129,7 @@ export default function WebsiteDetailPage({ websites, onDelete }: WebsiteDetailP
                 href={`https://${website.domain}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1.5 rounded-md bg-muted/40 px-3 py-2 text-sm text-primary hover:underline"
+                className="flex items-center gap-1.5 rounded-md bg-muted/40 px-3 py-2 text-sm text-sidebar-primary hover:underline"
               >
                 {website.domain}
                 <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
