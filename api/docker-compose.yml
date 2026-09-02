@@ -56,6 +56,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     networks:
       - blueprint
 
@@ -89,26 +91,26 @@ services:
       - blueprint
 
   # ── Landing server ────────────────────────────────────────────────────────────
-  landing:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: landing-prod
-    container_name: landing
-    restart: unless-stopped
-    environment:
-      API_URL: ${API_URL:-http://api:${PORT:-8080}}
-      STATIC_DIR: /app/static
-      LANDING_CACHE_DIR: /app/cache
-      LANDING_PORT: ${LANDING_PORT:-8081}
-      LANDING_WEBSITE_ID: ${LANDING_WEBSITE_ID:-}
-      LANDING_API_TIMEOUT_MS: ${LANDING_API_TIMEOUT_MS:-1500}
-    volumes:
-      - landing_cache:/app/cache
-    depends_on:
-      - api
-    networks:
-      - blueprint
+  # landing:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: landing-prod
+  #   container_name: landing
+  #   restart: unless-stopped
+  #   environment:
+  #     API_URL: ${API_URL:-http://api:${PORT:-8080}}
+  #     STATIC_DIR: /app/static
+  #     LANDING_CACHE_DIR: /app/cache
+  #     LANDING_PORT: ${LANDING_PORT:-8081}
+  #     LANDING_WEBSITE_ID: ${LANDING_WEBSITE_ID:-}
+  #     LANDING_API_TIMEOUT_MS: ${LANDING_API_TIMEOUT_MS:-1500}
+  #   volumes:
+  #     - landing_cache:/app/cache
+  #   depends_on:
+  #     - api
+  #   networks:
+  #     - blueprint
 
   # ── Editor server ─────────────────────────────────────────────────────────────
   editor:
@@ -198,6 +200,12 @@ services:
       KC_HEALTH_ENABLED: "true"
     volumes:
       - ./keycloak/realm-nawaran.json:/opt/keycloak/data/import/realm-nawaran.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '200' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     depends_on:
       keycloak_db:
         condition: service_healthy
@@ -233,7 +241,7 @@ services:
 
 volumes:
   psql_volume_bp:
-  landing_cache:
+  # landing_cache:
   editor_cache:
   keycloak_db_data:
   caddy_data:
