@@ -19,10 +19,6 @@ func main() {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("website_id")
 
-		if id == "" {
-			id = r.URL.Query().Get("page_id")
-		}
-
 		handler := renderer.NewPageHandler(renderer.HandlerConfig{
 			APIURL:    apiURL,
 			CacheDir:  cacheDir,

@@ -19,6 +19,7 @@ import {
   Loader2Icon,
   FilePenIcon,
 } from "lucide-react"
+import { appConfig } from "@/lib/config"
 
 interface WebsiteDetailPageProps {
   websites: WebsiteItem[]
@@ -88,7 +89,7 @@ export default function WebsiteDetailPage({ websites, onDelete }: WebsiteDetailP
               variant="outline"
               render={
                 <a
-                  href={`https://${website.domain}/editor?page_id=${website.id}`}
+                  href={`${appConfig.editorBaseUrl}?website_id=${website.id}&domain=${website.domain}`}
                   target="_blank"
                   rel="noreferrer"
                 />

@@ -20,7 +20,7 @@ Setelah itu, editor otomatis aktif untuk elemen mana pun di halaman yang punya a
 
 ### Syarat agar Save berfungsi
 
-- URL halaman **wajib** mengandung `?website_id=...` (atau fallback `?page_id=...`), karena ID ini dipakai editor untuk tahu halaman mana yang sedang disimpan.
+- URL halaman **wajib** mengandung `?website_id=...`, karena ID ini dipakai editor untuk tahu halaman mana yang sedang disimpan.
 - Saat halaman dimuat, editor otomatis mengarahkan user ke login Keycloak jika belum login. Save tidak akan bisa dipakai tanpa sesi login yang valid — ini di luar kendali template, jadi cukup pastikan halaman diakses lewat alur yang sudah terhubung ke Keycloak.
 - Domain diambil otomatis dari `?domain=...` di URL, atau kalau tidak ada, dari hostname halaman itu sendiri. Tidak perlu diatur manual di template.
 
@@ -237,7 +237,7 @@ Taruh script ini **setelah** `<script src="static/editor.js"></script>`.
 ## 6. Checklist Cepat Integrasi ke Template Baru
 
 - [ ] `editor.css` dan `editor.js` sudah di-link di halaman
-- [ ] Halaman diakses dengan `?website_id=...` (atau `?page_id=...`) di URL
+- [ ] Halaman diakses dengan `?website_id=...` di URL
 - [ ] Field satuan (judul, deskripsi, harga, dll) → `data-editor="text" data-name="..."`
 - [ ] Tidak ada `data-name` yang sama dipakai di lebih dari satu elemen edit
 - [ ] Daftar berulang (fitur, testimoni, dll) → container dengan `data-editor-collection="..."`

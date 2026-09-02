@@ -161,7 +161,7 @@ export default function WebsitesPage({
                           </DropdownMenuItem>
                         </RoleGate>
                         {site.domain && (
-                          <DropdownMenuItem onClick={() => window.open(`${appConfig.editorBaseUrl}/editor?page_id=${site.id}&domain=${site.domain}`, "_blank")}>
+                          <DropdownMenuItem onClick={() => window.open(`${appConfig.editorBaseUrl}?website_id=${site.id}&domain=${site.domain}`, "_blank")}>
                             <FilePenIcon className="h-3.5 w-3.5" /> Buka Editor
                           </DropdownMenuItem>
                         )}
