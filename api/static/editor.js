@@ -57,7 +57,7 @@
     defaultAddLabel: "+ Tambah item",
 
     // Endpoint API backend (lihat api/internal/server/websites.go).
-    apiUrl: "https://api.nawaran.id/api/websites/save",
+    apiUrl: "/api/websites/save",
 
     keycloakUrl: "http://localhost:8082",
     keycloakRealm: "nawaran",
@@ -178,6 +178,12 @@
   const deletedItems = new Map();
 
   let isSaving = false;
+
+  // Hook untuk ekstensi field non-teks (mis. editor-image.js) yang perlu
+  // ikut bereaksi saat user menekan Cancel atau setelah Save berhasil,
+  // meskipun perubahannya tidak lewat contentEditable seperti field teks.
+  const cancelHooks = [];
+  const saveSuccessHooks = [];
 
   /**
    * ========================================
@@ -708,6 +714,14 @@
       textChanges = {};
       activeEditor = null;
 
+      saveSuccessHooks.forEach((fn) => {
+        try {
+          fn();
+        } catch (error) {
+          console.error("InlineEditor save-success hook error:", error);
+        }
+      });
+
       hideToolbar();
       showNotification("Perubahan berhasil disimpan", "success");
     } catch (error) {
@@ -759,6 +773,14 @@
 
     textChanges = {};
     activeEditor = null;
+
+    cancelHooks.forEach((fn) => {
+      try {
+        fn();
+      } catch (error) {
+        console.error("InlineEditor cancel hook error:", error);
+      }
+    });
 
     hideToolbar();
     showNotification("Perubahan dibatalkan", "info");
@@ -882,5 +904,53 @@
     getChanges: buildPayload,
     save: saveEditor,
     cancel: cancelEditor,
+
+    // ---------------------------------------------------------
+    // Extension hooks — dipakai oleh script tambahan (mis.
+    // editor-image.js) untuk menambah jenis field baru selain teks,
+    // tapi tetap ikut ke alur Save/Cancel/Toolbar yang sama.
+    // ---------------------------------------------------------
+
+    // Bangun field key yang konsisten (mendukung field di dalam koleksi).
+    buildFieldKey,
+
+    // Set/track sebuah perubahan secara manual (bukan lewat contentEditable).
+    setChange(key, value) {
+      if (!key) return;
+      textChanges[key] = value;
+      updateToolbarCount();
+      showToolbar();
+    },
+
+    // Hapus sebuah perubahan yang pernah di-set manual.
+    clearChange(key) {
+      if (!key) return;
+      delete textChanges[key];
+      updateToolbarCount();
+    },
+
+    // Daftarkan fungsi yang dipanggil saat user menekan Cancel.
+    onCancel(fn) {
+      if (typeof fn === "function") cancelHooks.push(fn);
+    },
+
+    // Daftarkan fungsi yang dipanggil setelah Save berhasil.
+    onSaveSuccess(fn) {
+      if (typeof fn === "function") saveSuccessHooks.push(fn);
+    },
+
+    // Toast notification yang sama dengan yang dipakai editor ini.
+    notify: showNotification,
+
+    // Token Keycloak saat ini, untuk dipakai ekstensi yang perlu
+    // otentikasi ke endpoint lain (mis. upload file).
+    getAuthToken() {
+      return (keycloakClient && keycloakClient.token) || null;
+    },
+
+    // Promise yang resolve begitu login Keycloak siap.
+    whenAuthReady() {
+      return authReadyPromise;
+    },
   };
 })();
