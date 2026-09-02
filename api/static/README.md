@@ -18,6 +18,14 @@ Tambahkan dua file ini di halaman:
 
 Setelah itu, editor otomatis aktif untuk elemen mana pun di halaman yang punya atribut yang dijelaskan di bawah — tidak perlu inisialisasi manual.
 
+### Syarat agar Save berfungsi
+
+- URL halaman **wajib** mengandung `?website_id=...` (atau fallback `?page_id=...`), karena ID ini dipakai editor untuk tahu halaman mana yang sedang disimpan.
+- Saat halaman dimuat, editor otomatis mengarahkan user ke login Keycloak jika belum login. Save tidak akan bisa dipakai tanpa sesi login yang valid — ini di luar kendali template, jadi cukup pastikan halaman diakses lewat alur yang sudah terhubung ke Keycloak.
+- Domain diambil otomatis dari `?domain=...` di URL, atau kalau tidak ada, dari hostname halaman itu sendiri. Tidak perlu diatur manual di template.
+
+Ketiga hal di atas murni soal environment/deploy, bukan sesuatu yang ditulis di HTML template.
+
 ---
 
 ## 2. Field Teks Biasa (`data-editor="text"`)
@@ -30,7 +38,7 @@ Untuk konten satuan (judul, deskripsi, harga, dll) yang bukan bagian dari daftar
 |---|---|---|
 | `data-editor="text"` | Ya | Menandai elemen ini bisa diklik untuk diedit |
 | `data-name="..."` | Ya | Nama field, jadi *key* saat disimpan |
-| `data-editor-maxlength="..."` | Opsional | Batas jumlah karakter |
+| `data-editor-maxlength="..."` | Opsional | Batas jumlah karakter. Kalau user melebihi batas, teks otomatis dipotong dan muncul notifikasi |
 
 ### Contoh sederhana
 
@@ -67,6 +75,14 @@ Solusinya: pilih **satu** lokasi sebagai titik edit "kanonik" (biasanya yang pal
 <!-- Duplikat tampilan saja: TIDAK diberi data-editor -->
 <div class="brand">{{ .title }}</div>
 ```
+
+### Perilaku edit yang perlu diketahui (tidak perlu diatur, otomatis)
+
+- Klik pada field langsung masuk mode edit (contentEditable), cursor otomatis diletakkan di akhir teks.
+- User boleh mengedit beberapa field sekaligus sebelum menekan Save — tidak harus satu-satu.
+- Paste dari clipboard otomatis dipaksa jadi plain text, jadi format/HTML dari sumber luar (mis. copy dari Word) tidak ikut masuk.
+- `Esc` = batalkan semua perubahan (dengan konfirmasi), `Ctrl/Cmd+Enter` = simpan.
+- Menutup/meninggalkan halaman saat ada perubahan belum tersimpan akan memunculkan konfirmasi browser.
 
 ---
 
@@ -177,7 +193,7 @@ Tidak perlu penanganan khusus — cukup pasang atributnya seperti biasa:
 Perilakunya beda otomatis, tidak perlu setting tambahan:
 
 - **Item baru** (belum pernah disimpan) → klik hapus langsung membuang dari DOM, tidak masuk ke payload sama sekali.
-- **Item lama** (sudah punya `data-item-id` dari server) → klik hapus hanya menandai visual "akan dihapus" (masih bisa dibatalkan lewat tombol Cancel). ID-nya masuk ke `payload.deletedItems`:
+- **Item lama** (sudah punya `data-item-id` dari server) → klik hapus hanya menandai visual "akan dihapus" (masih bisa dibatalkan lewat tombol Cancel, atau lewat `Esc`). ID-nya masuk ke `payload.deletedItems`:
 
 ```json
 {
@@ -189,9 +205,11 @@ Perilakunya beda otomatis, tidak perlu setting tambahan:
 
 ---
 
-## 5. Menghubungkan ke Backend
+## 5. Menyimpan ke Backend (opsional untuk override)
 
-Default-nya, Save cuma `console.log` payload. Ganti dengan:
+Secara default, Save sudah otomatis mengirim payload ke backend (`POST /api/websites/save`) lengkap dengan `website_id`, `domain`, dan token login Keycloak di header `Authorization`. Untuk kebutuhan template biasa, **tidak ada yang perlu dikonfigurasi** di bagian ini.
+
+Kalau butuh perilaku custom (misalnya endpoint berbeda atau integrasi khusus), `onSave` bisa ditimpa lewat:
 
 ```html
 <script>
@@ -219,13 +237,13 @@ Taruh script ini **setelah** `<script src="static/editor.js"></script>`.
 ## 6. Checklist Cepat Integrasi ke Template Baru
 
 - [ ] `editor.css` dan `editor.js` sudah di-link di halaman
+- [ ] Halaman diakses dengan `?website_id=...` (atau `?page_id=...`) di URL
 - [ ] Field satuan (judul, deskripsi, harga, dll) → `data-editor="text" data-name="..."`
 - [ ] Tidak ada `data-name` yang sama dipakai di lebih dari satu elemen edit
 - [ ] Daftar berulang (fitur, testimoni, dll) → container dengan `data-editor-collection="..."`
 - [ ] Tiap item punya `data-editor-item` dan `data-item-id` (untuk item yang sudah ada)
 - [ ] Minimal ada 1 item contoh di setiap koleksi (jadi acuan struktur item baru) — atau sediakan `<template>` kalau koleksinya boleh kosong sejak awal
 - [ ] Tombol tambah/hapus **tidak perlu ditulis manual** — cukup pastikan tidak sengaja menghapus behavior default-nya
-- [ ] `InlineEditor.configure({ onSave })` sudah diarahkan ke API backend
 
 ---
 
