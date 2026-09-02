@@ -10,7 +10,37 @@ const defaultTemplate: TemplateItem = {
   name: "Landing Dasar",
   description: "Template landing page basic untuk mulai cepat",
   data: {
-    title: "Judul Halaman"
+    "title": "Judul Halaman",
+    "subtitle": "Deskripsi website",
+    "features": [
+      {
+        "title": "Fitur Pertama",
+        "description": "Deskripsi fitur pertama"
+      },
+      {
+        "title": "Fitur Kedua",
+        "description": "Deskripsi fitur kedua"
+      }
+    ],
+    "benefits": [
+      {
+        "text": "Gratis konsultasi"
+      },
+      {
+        "text": "Dukungan 24/7"
+      }
+    ],
+    "stats": [
+      {
+        "value": "500+",
+        "label": "Pengguna"
+      }
+    ],
+    "items": [
+      {
+        "text": "Item pertama"
+      }
+    ]
   },
   html: `<!doctype html>
 <html lang="id">
@@ -38,13 +68,14 @@ const defaultTemplate: TemplateItem = {
     .stat-item {padding: 28px; background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;}
     .stat-value {display: block; font-size: 36px; line-height: 1.2;}
     .stat-label {color: #64748b;}
-    .items {padding-left: 0; list-style: none;}
+    .items {width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 24px 70px; list-style: none;}
     .item {padding: 16px 20px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px;}
     @media (max-width: 768px) {
       header {padding: 60px 20px;}
       header h1 {font-size: 36px;}
       section {padding: 50px 20px;}
       .feature-grid, .benefits, .stats {grid-template-columns: 1fr;}
+      .items {padding: 0 20px 50px;}
     }
   </style>
 </head>
@@ -52,40 +83,41 @@ const defaultTemplate: TemplateItem = {
   <!-- Single text field -->
   <header>
     <h1 data-editor="text" data-name="title">{{ .title }}</h1>
-    <p data-editor="text" data-name="subtitle">Deskripsi website</p>
+    <p data-editor="text" data-name="subtitle">{{ .subtitle }}</p>
   </header>
   <!-- Collection: multiple fields -->
-  <section data-editor-collection="features" data-editor-add-label="+ Tambah fitur">
-    <article class="feature-grid" data-editor-item data-item-id="0">
-      <h2 data-editor="text" data-name="title">Fitur Pertama</h2>
-      <p data-editor="text" data-name="description">Deskripsi fitur pertama</p>
+  <section class="feature-grid" data-editor-collection="features" data-editor-add-label="+ Tambah fitur">
+    {{ range $index, $item := .features }}
+    <article class="feature-item" data-editor-item data-item-id="{{ $index }}">
+      <h2 data-editor="text" data-name="title">{{ $item.title }}</h2>
+      <p data-editor="text" data-name="description">{{ $item.description }}</p>
     </article>
-    <article class="feature-grid" data-editor-item data-item-id="1">
-      <h2 data-editor="text" data-name="title">Fitur Kedua</h2>
-      <p data-editor="text" data-name="description">Deskripsi fitur kedua</p>
-    </article>
+    {{ end }}
   </section>
   <!-- Collection: array string -->
   <section class="benefits" data-editor-collection="benefits" data-editor-add-label="+ Tambah benefit">
-    <div class="benefit-item" data-editor-item data-item-id="0">
-      <span data-editor="text" data-name="text">Gratis konsultasi</span>
+    {{ range $index, $item := .benefits }}
+    <div class="benefit-item" data-editor-item data-item-id="{{ $index }}">
+      <span data-editor="text" data-name="text">{{ $item.text }}</span>
     </div>
-    <div class="benefit-item" data-editor-item data-item-id="1">
-      <span data-editor="text" data-name="text">Dukungan 24/7</span>
-    </div>
+    {{ end }}
   </section>
-  <!-- Collection with multiple fields -->
+  <!-- Collection: multiple fields -->
   <section class="stats" data-editor-collection="stats" data-editor-add-label="+ Tambah statistik">
-    <div class="stat-item" data-editor-item data-item-id="0">
-      <strong class="stat-value" data-editor="text" data-name="value">500+</strong>
-      <span class="stat-label" data-editor="text" data-name="label">Pengguna</span>
+    {{ range $index, $item := .stats }}
+    <div class="stat-item" data-editor-item data-item-id="{{ $index }}">
+      <strong class="stat-value" data-editor="text" data-name="value">{{ $item.value }}</strong>
+      <span class="stat-label" data-editor="text" data-name="label">{{ $item.label }}</span>
     </div>
+    {{ end }}
   </section>
-  <!-- UL collection -->
+  <!-- Collection: UL -->
   <ul class="items" data-editor-collection="items" data-editor-add-label="+ Tambah item">
-    <li class="item" data-editor-item data-item-id="0">
-      <span data-editor="text" data-name="text">Item pertama</span>
+    {{ range $index, $item := .items }}
+    <li class="item" data-editor-item data-item-id="{{ $index }}">
+      <span data-editor="text" data-name="text">{{ $item.text }}</span>
     </li>
+    {{ end }}
   </ul>
   {{ range .scripts }}
   <script src="{{ . }}"></script>
