@@ -58,10 +58,9 @@
     keycloakRealm: "nawaran",
     keycloakClientId: "landing-editor",
 
-    // ID website diambil dari query string ?website_id=... (fallback: page_id).
-    pageId:
-      new URLSearchParams(window.location.search).get("website_id") ||
-      new URLSearchParams(window.location.search).get("page_id"),
+    // ID website diambil dari query string ?website_id=... (fallback: website_id).
+    websiteId:
+      new URLSearchParams(window.location.search).get("website_id"),
 
     domain:
       new URLSearchParams(window.location.search).get("domain") ||
@@ -70,7 +69,7 @@
     // Callback saat Save ditekan. Default: kirim payload ke apiUrl lewat fetch.
     // Bisa diganti lewat InlineEditor.configure({ onSave: async (payload) => {...} })
     onSave: async (payload) => {
-      if (!config.pageId) {
+      if (!config.websiteId) {
         console.error("InlineEditor: website_id tidak ditemukan di query string.");
         return { ok: false, message: "website_id belum di-set di halaman ini" };
       }
@@ -84,7 +83,7 @@
             Authorization: `Bearer ${keycloakClient.token}`,
           },
           body: JSON.stringify({
-            website_id: config.pageId,
+            website_id: config.websiteId,
             domain: config.domain,
             ...payload,
           }),
