@@ -178,15 +178,17 @@ func GetWebsiteData(client *http.Client, apiURL, websiteID string) (map[string]a
 // RenderPayload renders the HTML template stored in payload["html"] using the
 // remaining fields as template data. editable injects a boolean so templates
 // can conditionally show editor controls.
-func RenderPayload(w http.ResponseWriter, payload map[string]any, editable bool) {
+func RenderPayload(w http.ResponseWriter, payload map[string]any, scripts, styles []string) {
 	data := make(map[string]any, len(payload)+1)
 	for k, v := range payload {
 		data[k] = v
 	}
 
-	if editable {
-		data["scripts"] = []string{"static/editor.js"}
-		data["styles"] = []string{"static/editor.css"}
+	if len(scripts) > 0 {
+		data["scripts"] = scripts
+	}
+	if len(styles) > 0 {
+		data["styles"] = styles
 	}
 
 	htmlSource, _ := data["html"].(string)
@@ -217,7 +219,8 @@ type HandlerConfig struct {
 	CacheDir  string
 	DefaultID string
 	Timeout   time.Duration
-	Editable  bool
+	Scripts   []string
+	Styles    []string
 }
 
 // NewPageHandler returns an http.HandlerFunc that fetches, caches, and renders
@@ -236,7 +239,7 @@ func NewPageHandler(cfg HandlerConfig) http.HandlerFunc {
 
 		updatedAt, versionErr := GetWebsiteVersion(client, cfg.APIURL, websiteID)
 		if versionErr == nil && cached != nil && cached.UpdatedAt == updatedAt {
-			RenderPayload(w, cached.Payload, cfg.Editable)
+			RenderPayload(w, cached.Payload, cfg.Scripts, cfg.Styles)
 			return
 		}
 
@@ -250,12 +253,12 @@ func NewPageHandler(cfg HandlerConfig) http.HandlerFunc {
 			if freshUpdatedAt != "" {
 				_ = WriteCache(cfg.CacheDir, websiteID, freshUpdatedAt, fresh)
 			}
-			RenderPayload(w, fresh, cfg.Editable)
+			RenderPayload(w, fresh, cfg.Scripts, cfg.Styles)
 			return
 		}
 
 		if cached != nil {
-			RenderPayload(w, cached.Payload, cfg.Editable)
+			RenderPayload(w, cached.Payload, cfg.Scripts, cfg.Styles)
 			return
 		}
 

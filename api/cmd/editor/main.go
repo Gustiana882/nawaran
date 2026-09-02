@@ -40,7 +40,8 @@ func main() {
 			CacheDir:  cacheDir,
 			DefaultID: id,
 			Timeout:   renderer.ParseTimeout(timeoutMS),
-			Editable:  true,
+			Scripts:   []string{"static/editor.js", "static/editor-image.js"},
+			Styles:    []string{"static/editor.css", "static/editor-image.css"},
 		})
 
 		handler(w, r)

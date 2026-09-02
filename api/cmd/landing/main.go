@@ -22,7 +22,8 @@ func main() {
 		CacheDir:  cacheDir,
 		DefaultID: defaultID,
 		Timeout:   renderer.ParseTimeout(timeoutMS),
-		Editable:  false,
+		Scripts:   []string{},
+		Styles:    []string{},
 	}))
 
 	println("Landing server running at http://localhost:" + port)
