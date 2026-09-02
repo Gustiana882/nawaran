@@ -19,6 +19,7 @@ import {
   ExternalLinkIcon,
   FilePenIcon,
 } from "lucide-react"
+import { appConfig } from "@/lib/config"
 
 interface WebsitesPageProps {
   websites: WebsiteItem[]
@@ -160,7 +161,7 @@ export default function WebsitesPage({
                           </DropdownMenuItem>
                         </RoleGate>
                         {site.domain && (
-                          <DropdownMenuItem onClick={() => window.open(`https://${site.domain}/editor?page_id=${site.id}`, "_blank")}>
+                          <DropdownMenuItem onClick={() => window.open(`${appConfig.editorBaseUrl}/editor?page_id=${site.id}&domain=${site.domain}`, "_blank")}>
                             <FilePenIcon className="h-3.5 w-3.5" /> Buka Editor
                           </DropdownMenuItem>
                         )}
