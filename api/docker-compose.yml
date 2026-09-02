@@ -17,7 +17,6 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - landing
       - editor
     networks:
       - blueprint
@@ -125,7 +124,6 @@ services:
       STATIC_DIR: /app/static
       LANDING_CACHE_DIR: /app/cache
       EDITOR_PORT: ${EDITOR_PORT:-8082}
-      EDITOR_WEBSITE_ID: ${EDITOR_WEBSITE_ID:-}
       EDITOR_API_TIMEOUT_MS: ${EDITOR_API_TIMEOUT_MS:-1500}
     volumes:
       - editor_cache:/app/cache
