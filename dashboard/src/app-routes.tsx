@@ -244,7 +244,7 @@ export default function AppRoutes() {
     const [params] = useSearchParams()
     const templateId = params.get("templateId")
     const template = templateId ? templates.find((item) => item.id === templateId) : undefined
-    return <WebsiteCreatePage template={template} onSave={onSaveWebsite} />
+    return <WebsiteCreatePage template={template} templates={templates} onSave={onSaveWebsite} />
   }
 
   function TemplateEditRoute() {

@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { PageToast, useToast } from "@/components/page-toast"
 import type { TemplateItem } from "@/types/cms"
 import {
@@ -23,33 +30,44 @@ export interface WebsiteSavePayload {
 
 interface WebsiteCreatePageProps {
   template?: TemplateItem
+  templates: TemplateItem[]
   onSave: (payload: WebsiteSavePayload) => Promise<{ ok: boolean; message?: string }>
 }
 
-export default function WebsiteCreatePage({ template, onSave }: WebsiteCreatePageProps) {
+export default function WebsiteCreatePage({ template, templates, onSave }: WebsiteCreatePageProps) {
   const { toast, showToast, dismissToast } = useToast()
 
+  const [selectedTemplateId, setSelectedTemplateId] = React.useState(template?.id ?? "")
   const [name, setName] = React.useState(template ? `${template.name} Website` : "")
   const [description, setDescription] = React.useState(template?.description ?? "")
   const [domain, setDomain] = React.useState("")
   const [isSaving, setIsSaving] = React.useState(false)
 
   React.useEffect(() => {
-    if (!template) return
-    setName(`${template.name} Website`)
-    setDescription(template.description)
+    setSelectedTemplateId(template?.id ?? "")
+    setName(template ? `${template.name} Website` : "")
+    setDescription(template?.description ?? "")
   }, [template])
+
+  const selectedTemplate = templates.find((item) => item.id === selectedTemplateId)
+
+  function handleTemplateChange(templateId: string|null) {
+    const nextTemplate = templates.find((item) => item.id === templateId)
+    setSelectedTemplateId(templateId || "")
+    setName(nextTemplate ? `${nextTemplate.name} Website` : "")
+    setDescription(nextTemplate?.description ?? "")
+  }
 
   async function handleSave() {
     if (!name.trim()) { showToast("error", "Nama website wajib diisi"); return }
-    if (!template) { showToast("error", "Pilih template terlebih dahulu"); return }
+    if (!selectedTemplate) { showToast("error", "Pilih template terlebih dahulu"); return }
 
     setIsSaving(true)
     const result = await onSave({
       name: name.trim(),
       description: description.trim(),
       domain: domain.trim(),
-      template_uuid: template.id,
+      template_uuid: selectedTemplate.id,
     })
     setIsSaving(false)
 
@@ -91,7 +109,7 @@ export default function WebsiteCreatePage({ template, onSave }: WebsiteCreatePag
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Template</p>
               <p className="truncate text-sm font-medium">
-                {template ? template.name : (
+                {selectedTemplate ? selectedTemplate.name : (
                   <span className="flex items-center gap-1.5 text-destructive">
                     <AlertCircleIcon className="h-3.5 w-3.5" />
                     Belum ada template dipilih
@@ -103,6 +121,25 @@ export default function WebsiteCreatePage({ template, onSave }: WebsiteCreatePag
 
           {/* Form */}
           <div className="space-y-4 rounded-lg border bg-card p-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="ws-template" className="text-xs font-medium">
+                Template <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={selectedTemplateId}
+                onValueChange={handleTemplateChange}
+              >
+                <SelectTrigger id="ws-template" className="w-full">
+                  <SelectValue placeholder="Pilih template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="ws-name" className="text-xs font-medium">
                 Nama <span className="text-destructive">*</span>
