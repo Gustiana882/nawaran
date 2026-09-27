@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { GalleryVerticalEndIcon, LayoutTemplateIcon, GlobeIcon, ArrowUpDownIcon, ServerIcon } from "lucide-react"
+import { GalleryVerticalEndIcon, LayoutTemplateIcon, GlobeIcon, ArrowUpDownIcon, ServerIcon, ImageIcon } from "lucide-react"
 
 // This is sample data.
 const data = {
@@ -45,6 +45,12 @@ const data = {
       url: "/containers",
       icon: <ServerIcon />,
       permission: "container.view",
+    },
+    {
+      title: "Media",
+      url: "/media",
+      icon: <ImageIcon />,
+      permission: "website.view",
     },
   ],
 }

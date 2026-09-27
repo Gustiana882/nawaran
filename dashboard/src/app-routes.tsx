@@ -24,6 +24,7 @@ import WebsiteDetailPage from "./pages/website-detail"
 import WebsiteEditPage from "./pages/website-edit"
 import WebsitesPage from "./pages/websites"
 import ContainersPage from "./pages/containers"
+import MediaPage from "./pages/media"
 
 export default function AppRoutes() {
   const navigate = useNavigate()
@@ -379,6 +380,8 @@ export default function AppRoutes() {
           />
         }
       />
+
+      <Route path="/media" element={<MediaPage />} />
 
       <Route path="*" element={<Navigate to="/templates" replace />} />
     </Routes>

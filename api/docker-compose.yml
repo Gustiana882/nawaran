@@ -44,6 +44,8 @@ services:
       KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-http://keycloak:8080/realms/nawaran/protocol/openid-connect/certs}
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-dashboard,landing-editor}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://admin:admin@rabbitmq:5672/}
+      FILE_STORAGE_DRIVER: ${FILE_STORAGE_DRIVER:-local}
+      FILE_STORAGE_PATH: ${FILE_STORAGE_PATH:-/app/uploads}
       QUEUE_NAME: ${QUEUE_NAME:-provision-website}
       PODMAN_API_URL: ${PODMAN_API_URL}
       PODMAN_NETWORK: ${PODMAN_NETWORK:-}
@@ -57,6 +59,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+    volumes:
+      - api_uploads:/app/uploads
     networks:
       - blueprint
 
@@ -238,6 +242,7 @@ services:
       - blueprint
 
 volumes:
+  api_uploads:
   psql_volume_bp:
   # landing_cache:
   editor_cache:

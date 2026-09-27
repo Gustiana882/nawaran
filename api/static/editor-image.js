@@ -46,7 +46,7 @@
 
     // Endpoint upload file. Response yang diharapkan: string URL polos
     // (atau JSON string, atau JSON { "url": "..." } — semua dikenali).
-    uploadUrl: "http://localhost:8080/api/upload",
+    uploadUrl: "/api/upload",
 
     // Batas ukuran file upload (MB).
     maxFileSizeMb: 5,

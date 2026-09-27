@@ -30,6 +30,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	mux.HandleFunc("/api/websites/version", s.handleGetVersion)
 
+	mux.Handle("/api/upload", s.protected(http.HandlerFunc(s.handleUpload)))
+	mux.Handle("/api/upload/", s.protected(http.HandlerFunc(s.handleUploadByName)))
+	mux.HandleFunc("/api/images/", s.handlePublicImage)
+
 	mux.Handle("/api/templates", s.protected(http.HandlerFunc(s.handleTemplates)))
 	mux.Handle("/api/templates/", s.protected(http.HandlerFunc(s.handleTemplateByID)))
 

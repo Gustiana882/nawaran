@@ -45,6 +45,10 @@ type Service interface {
 	CreateTemplate(ctx context.Context, input CreateTemplateInput) (*Template, error)
 	UpdateTemplate(ctx context.Context, id string, input UpdateTemplateInput) (*Template, error)
 	DeleteTemplate(ctx context.Context, id string) error
+
+	ListMediaFiles(ctx context.Context, userID string) ([]MediaFile, error)
+	CreateMediaFile(ctx context.Context, input CreateMediaFileInput) (*MediaFile, error)
+	DeleteMediaFile(ctx context.Context, userID, name string) error
 }
 
 type service struct {
@@ -73,6 +77,9 @@ func New() Service {
 	}
 	if err := ensureTemplatesTable(db); err != nil {
 		log.Fatalf("failed to ensure templates table: %v", err)
+	}
+	if err := ensureMediaFilesTable(db); err != nil {
+		log.Fatalf("failed to ensure media_files table: %v", err)
 	}
 	dbInstance = &service{
 		db: db,

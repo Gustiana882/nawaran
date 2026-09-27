@@ -148,6 +148,12 @@ func ClaimsFromContext(ctx context.Context) jwt.MapClaims {
 	return claims
 }
 
+// WithClaims attaches validated claims to a request context.
+// It is also useful for handlers that are exercised without the HTTP middleware.
+func WithClaims(ctx context.Context, claims jwt.MapClaims) context.Context {
+	return context.WithValue(ctx, claimsKey{}, claims)
+}
+
 // hasRole mengambil role dari claims "resource_access.<audience>.roles",
 // sesuai struktur token Keycloak untuk client role (role di-scope ke client,
 // bukan realm_access global). Client id yang dicek diambil dari

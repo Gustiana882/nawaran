@@ -39,3 +39,15 @@ CREATE TABLE public.websites (
 	CONSTRAINT websites_unique UNIQUE (uuid),
 	CONSTRAINT websites_unique_1 UNIQUE (domain)
 );
+
+CREATE TABLE IF NOT EXISTS public.media_files (
+	id bigserial PRIMARY KEY,
+	user_id text NOT NULL,
+	name text NOT NULL,
+	size bigint NOT NULL,
+	content_type text NOT NULL,
+	created_at timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT media_files_user_name_unique UNIQUE (user_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS media_files_user_id_idx ON public.media_files (user_id);

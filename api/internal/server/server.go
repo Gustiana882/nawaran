@@ -17,6 +17,7 @@ import (
 	"api/internal/database"
 	"api/internal/proxy"
 	"api/internal/queue"
+	"api/internal/storage"
 )
 
 type Server struct {
@@ -27,6 +28,7 @@ type Server struct {
 	container *container.Service
 	proxy     *proxy.Service
 	producer  *queue.Producer
+	files     storage.FileStorage
 }
 
 func NewServer() *http.Server {
@@ -40,6 +42,10 @@ func NewServer() *http.Server {
 	if err != nil {
 		log.Fatalf("failed to create queue producer: %v", err)
 	}
+	fileStorage, err := newFileStorageFromEnv()
+	if err != nil {
+		log.Fatalf("failed to create file storage: %v", err)
+	}
 
 	NewServer := &Server{
 		port:      port,
@@ -48,6 +54,7 @@ func NewServer() *http.Server {
 		container: container.New(os.Getenv("PODMAN_API_URL")),
 		proxy:     proxy.New(os.Getenv("CADDY_API_URL"), os.Getenv("CADDY_SERVER_NAME")),
 		producer:  producer,
+		files:     fileStorage,
 	}
 
 	// Declare Server config
@@ -60,6 +67,17 @@ func NewServer() *http.Server {
 	}
 
 	return server
+}
+
+func newFileStorageFromEnv() (storage.FileStorage, error) {
+	driver := os.Getenv("FILE_STORAGE_DRIVER")
+	if driver == "" {
+		driver = "local"
+	}
+	if driver != "local" {
+		return nil, fmt.Errorf("unsupported FILE_STORAGE_DRIVER %q", driver)
+	}
+	return storage.NewLocal(os.Getenv("FILE_STORAGE_PATH"))
 }
 
 func (s *Server) protected(next http.Handler) http.Handler {
